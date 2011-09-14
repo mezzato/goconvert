@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 	"strconv"
-	"exif"
+	exif4go "exif4go.googlecode.com/hg/exif4go"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -22,7 +22,7 @@ func getFileExifInfo(fp string) (timestamp string, sortkey string, err os.Error)
 	defer f.Close()
 
 	//fmt.Println("Exif for file:", fp)
-	tags, err := exif.Process(f, false)
+	tags, err := exif4go.Process(f, false)
 	if err != nil {
 		return
 	}
