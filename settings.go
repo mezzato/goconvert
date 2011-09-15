@@ -217,7 +217,7 @@ func (s *Settings) GetConfigQuestions(mandatoryOnly bool) (l map[string]*Questio
 			"moveoriginal":             &Question{"Remove images after processing", newBoolParam(false, &s.ConversionSettings.MoveOriginal), "Whether to remove the images from the working folder after processing and archiving"},
 			"address":                  &Question{"FTP address", newStringParam("", &s.FtpSettings.Address), "The address of the FTP server, leave blank to skip the upload"},
 			"username":                 &Question{"FTP username", newStringParam("", &s.FtpSettings.Username), "The username to log onto the FTP server"},
-			"saveconfig":               &Question{"Save the new settings to a file", newBoolParam(true, &s.SaveConfig), "Whether to save the settings for next time"},
+			"saveconfig":               &Question{"Save the new settings to a file", newBoolParam(true, &s.SaveConfig), "Whether to save the settings for next time (passwords will not be saved!)"},
 		}
 		return o
 	}
@@ -286,7 +286,7 @@ func AskForSettings(collName string) (s *Settings, err os.Error) {
 	ftpkeys := []string{"address", "password", "username"} // sorted!
 	sort.Strings(ftpkeys)
 
-	var skipFtp = len(s.FtpSettings.Address) == 0
+	var skipFtp = useFile && len(s.FtpSettings.Address) == 0
 
 	for _, qkey := range questionOrder {
 
