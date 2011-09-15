@@ -2,6 +2,7 @@ include $(GOROOT)/src/Make.inc
 
 PREREQ+=ftp4go
 PREREQ+=exif4go
+PREREQ+=goconf
 
 TARG=goconvert
 
@@ -17,3 +18,6 @@ exif4go:
 
 ftp4go:
 	goinstall ftp4go.googlecode.com/hg/ftp4go
+
+goconf:
+	goinstall goconf.googlecode.com/hg

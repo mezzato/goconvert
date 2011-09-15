@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"conf"
+	conf "goconf.googlecode.com/hg"
 	"log"
 	"strconv"
 	"sort"
