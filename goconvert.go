@@ -82,7 +82,7 @@ func main() {
 		writeInfo("Serving content from", root)
 		
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			writeInfo("Handler for / called. URL.Path = " + r.URL.Path)
+			//writeInfo("Handler for / called. URL.Path = " + r.URL.Path)
 			if r.URL.Path == "/favicon.ico" || r.URL.Path == "/" {
 				fn := filepath.Join(root, webroot, r.URL.Path[1:])
 				http.ServeFile(w, r, fn)
