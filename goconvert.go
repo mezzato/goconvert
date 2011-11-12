@@ -10,11 +10,13 @@ import (
 	"strconv"
 	"strings"
 	"http"
+	"go/build"
 )
 
 type LogLevel int
 
 const WEBLOG_PORT = 4999 
+const basePkg = "goconvert.googlecode.com/hg"
 
 var (
 	hosturl = fmt.Sprintf("127.0.0.1:%d", WEBLOG_PORT)
@@ -69,20 +71,30 @@ func main() {
 	// start up a local web server
 
 	writeInfof("Starting up web server on port %d, click or copy this link to open up the page: %s\n", WEBLOG_PORT, hosturl)
-	writeInfo("Serving content from", webroot)
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/favicon.ico" || r.URL.Path == "/" {
-			fn := filepath.Join(webroot, r.URL.Path[1:])
-			http.ServeFile(w, r, fn)
-			return
-		}
-		http.Error(w, "not found", 404)
-	})
-	http.Handle("/" + webroot + "/", http.FileServer(http.Dir(webroot)))
 	
-	writeInfof("Serving at http://%s/\n", *httpListen) 
-	go http.ListenAndServe(*httpListen, nil)
+	// find and serve the goconvert files
+	t, _, err := build.FindTree(basePkg)
 	
+	if err != nil {
+		log.Printf("Couldn't find goconvert files: %v\n", err)
+	} else {
+		root := filepath.Join(t.SrcDir(), basePkg)
+		writeInfo("Serving content from", root)
+		
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			writeInfo("Handler for / called. URL.Path = " + r.URL.Path)
+			if r.URL.Path == "/favicon.ico" || r.URL.Path == "/" {
+				fn := filepath.Join(root, webroot, r.URL.Path[1:])
+				http.ServeFile(w, r, fn)
+				return
+			}
+			http.Error(w, "not found", 404)
+		})
+		http.Handle("/" + webroot + "/", http.FileServer(http.Dir(root)))
+		
+		writeInfof("Serving at http://%s/%s/\n", *httpListen, webroot) 
+		go http.ListenAndServe(*httpListen, nil)
+	}
 	// go http.ListenAndServe(":" + strconv.Itoa(WEBLOG_PORT), nil)
 
 	writeInfo(`
