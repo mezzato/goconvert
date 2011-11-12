@@ -9,9 +9,18 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"http"
 )
 
 type LogLevel int
+
+const WEBLOG_PORT = 4999 
+
+var (
+	hosturl = fmt.Sprintf("127.0.0.1:%d", WEBLOG_PORT)
+	httpListen = flag.String("http", hosturl, "host:port to listen on")
+	htmlOutput = flag.Bool("html", false, "render program output as HTML")
+)
 
 const (
 	Info LogLevel = 1 << iota
@@ -49,7 +58,32 @@ func writeVerbose(msgs ...interface{}) (n int, err os.Error) {
 	return writeLog(Verbose, msgs...)
 }
 
+func handler(w http.ResponseWriter, r *http.Request){
+	fmt.Fprint(w, "Hi there!")
+}
+
+var webroot string = "web"
+
 func main() {
+
+	// start up a local web server
+
+	writeInfof("Starting up web server on port %d, click or copy this link to open up the page: %s\n", WEBLOG_PORT, hosturl)
+	writeInfo("Serving content from", webroot)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/favicon.ico" || r.URL.Path == "/" {
+			fn := filepath.Join(webroot, r.URL.Path[1:])
+			http.ServeFile(w, r, fn)
+			return
+		}
+		http.Error(w, "not found", 404)
+	})
+	http.Handle("/" + webroot + "/", http.FileServer(http.Dir(webroot)))
+	
+	writeInfof("Serving at http://%s/\n", *httpListen) 
+	go http.ListenAndServe(*httpListen, nil)
+	
+	// go http.ListenAndServe(":" + strconv.Itoa(WEBLOG_PORT), nil)
 
 	writeInfo(`
 goconvert is a command line tool to convert, archive and upload images to an ftp server.
