@@ -11,28 +11,38 @@ import (
 	"strings"
 	"http"
 	"go/build"
+	"template"
 )
 
 type LogLevel int
 
-const WEBLOG_PORT = 4999 
-const basePkg = "goconvert.googlecode.com/hg"
+type Page struct {
+	Title string
+	WebPort  int
+}
 
-var (
-	hosturl = fmt.Sprintf("127.0.0.1:%d", WEBLOG_PORT)
-	httpListen = flag.String("http", hosturl, "host:port to listen on")
-	htmlOutput = flag.Bool("html", false, "render program output as HTML")
-)
 
 const (
 	Info LogLevel = 1 << iota
 	Verbose
+	WEBLOG_PORT = 4999 
+	basePkg = "goconvert.googlecode.com/hg"
+
 )
 
 var (
+
 	LogLevelForRun LogLevel = Info
 	argv0                   = os.Args[0]
+
+	hosturl = fmt.Sprintf("127.0.0.1:%d", WEBLOG_PORT)
+	httpListen = flag.String("http", hosturl, "host:port to listen on")
+	htmlOutput = flag.Bool("html", false, "render program output as HTML")
+	templates = make(map[string]*template.Template)
 )
+
+
+
 
 func writeLog(ll LogLevel, msgs ...interface{}) (n int, err os.Error) {
 	if ll <= LogLevelForRun {
@@ -66,6 +76,21 @@ func handler(w http.ResponseWriter, r *http.Request){
 
 var webroot string = "web"
 
+func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
+	t, ok := templates[tmpl]
+	if !ok {
+		http.Error(w, fmt.Sprintf("template %s does not exist", tmpl), http.StatusInternalServerError)
+		return
+	}
+	ctype := "text/html; charset=utf-8"
+	w.Header().Set("Content-Type", ctype)
+	err := t.Execute(w, data)
+	if err != nil {
+		http.Error(w, err.String(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func main() {
 
 	// start up a local web server
@@ -78,21 +103,40 @@ func main() {
 	if err != nil {
 		log.Printf("Couldn't find goconvert files: %v\n", err)
 	} else {
-		root := filepath.Join(t.SrcDir(), basePkg)
+		root := filepath.Join(t.SrcDir(), basePkg, webroot)
+		
+		for _, tmpl := range []string{"index.html"} {
+			fp:= filepath.Join(root,tmpl)
+			s, e := os.Stat(fp)
+			writeInfo("File", fp ,"exists", e == nil && !s.IsDirectory())
+			t := template.Must(template.ParseFile(fp))
+			templates[tmpl] = t
+		}
+		
 		writeInfo("Serving content from", root)
 		
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			//writeInfo("Handler for / called. URL.Path = " + r.URL.Path)
-			if r.URL.Path == "/favicon.ico" || r.URL.Path == "/" {
-				fn := filepath.Join(root, webroot, r.URL.Path[1:])
+			if r.URL.Path == "/favicon.ico" { //|| r.URL.Path == "/" {
+				fn := filepath.Join(root, r.URL.Path[1:])
 				http.ServeFile(w, r, fn)
+				return
+			} else {
+				tmpl := r.URL.Path[1:]
+				if len(tmpl) == 0 {
+					tmpl = "index.html"
+				}
+				//fn := filepath.Join(root, r.URL.Path[1:])
+				//http.ServeFile(w, r, fn)
+				p := &Page{WebPort: WEBLOG_PORT}
+				renderTemplate(w,tmpl,p)
 				return
 			}
 			http.Error(w, "not found", 404)
 		})
 		http.Handle("/" + webroot + "/", http.FileServer(http.Dir(root)))
 		
-		writeInfof("Serving at http://%s/%s/\n", *httpListen, webroot) 
+		writeInfof("Serving at http://%s/\n", *httpListen) 
 		go http.ListenAndServe(*httpListen, nil)
 	}
 	// go http.ListenAndServe(":" + strconv.Itoa(WEBLOG_PORT), nil)
