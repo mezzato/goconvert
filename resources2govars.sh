@@ -15,10 +15,10 @@ echo "func setVariables() {"  >> $RESFILE
 
 LIST=$(find $RESFOLDER -type f | egrep '\.(html|css|js)$')
 for i in $LIST; do
-	echo writing: $i
-	echo webresources[\"$i\"] = \` >> $RESFILE
+	RESNAME=$(echo $i | sed -e "s/${RESFOLDER}\///g")
+	echo writing: $RESNAME
+	echo webresources[\"$RESNAME\"] = \` >> $RESFILE
 	cat "$i" | sed -e 's/`/\\u0060/g' >> $RESFILE
-	#cat "$i" >> $RESFILE
 	echo \` >> $RESFILE
      # NEWNAME=$(ls "$i" | sed -e 's/html/php/')
      # cat beginfile > "$NEWNAME"

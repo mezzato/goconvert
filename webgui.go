@@ -2,15 +2,20 @@ package main
 
 import (
 	"os"
-	"go/build"
+	//"go/build"
 	"path/filepath"
 	"http"
 	"log"
 	"template"
+	"strings"
+	"io"
+	"fmt"
+	//"io/ioutil"
 )
 
-var webresources = make(map[string] string)
+var webresources = make(map[string]string)
 
+var webroot string = "website"
 /*
 // Echo the data received on the Web Socket.
 func echoServer(ws *websocket.Conn) {
@@ -27,50 +32,64 @@ func StartWebgui() os.Error {
 	writeInfof("Starting up web server on port %d, click or copy this link to open up the page: %s\n", WEBLOG_PORT, hosturl)
 
 	// find and serve the goconvert files
-	t, _, err := build.FindTree(basePkg)
-
+	//t, _, err := build.FindTree(basePkg)
+	var err os.Error
 	if err != nil {
 		log.Printf("Couldn't find goconvert files: %v\n", err)
 	} else {
-		root := filepath.Join(t.SrcDir(), basePkg, webroot)
+		//root := webroot //filepath.Join(t.SrcDir(), basePkg, webroot)
 
-		for _, tmpl := range []string{"index.html"} {
-			fp := filepath.Join(root, tmpl)
-			s, e := os.Stat(fp)
-			writeInfo("File", fp, "exists", e == nil && !s.IsDirectory())
-			t := template.Must(template.ParseFile(fp))
-			templates[tmpl] = t
+		for k, v := range webresources {
+			//fp := filepath.Join(root, tmpl)
+			//s, e := os.Stat(fp)
+			if strings.HasSuffix(k, "html") {
+				//writeInfo("File", fp, "exists", e == nil && !s.IsDirectory())
+				writeInfo("File", k, "is a template")
+				t := template.Must(template.New(k).Parse(v))
+				//t := template.Must(template.ParseFile(fp))
+				templates[k] = t
+			} else {
+				// write out to let it be served later as a static file
+				fp := filepath.Join(webroot, k)
+				writeInfo("Deploying resource to file system:", fp)
+				e := createFileAndWriteText(fp, v)
+				if e != nil {
+					return e
+				}
+			}
 		}
 
-		writeInfo("Serving content from", root)
+		writeInfo("Serving content from", webroot)
 
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			//writeInfo("Handler for / called. URL.Path = " + r.URL.Path)
 			if r.URL.Path == "/favicon.ico" { //|| r.URL.Path == "/" {
-				fn := filepath.Join(root, r.URL.Path[1:])
+				fn := filepath.Join(webroot, r.URL.Path[1:])
 				http.ServeFile(w, r, fn)
 				return
 			} else {
-				tmpl := r.URL.Path[1:]
-				if len(tmpl) == 0 {
-					tmpl = "index.html"
+				fkey := r.URL.Path[1:]
+				if len(fkey) == 0 {
+					fkey = "index.html"
 				}
+				fp := webroot + "/" + fkey
+
 				//fn := filepath.Join(root, r.URL.Path[1:])
 				//http.ServeFile(w, r, fn)
-				_, ok := templates[tmpl]
+				_, ok := templates[fkey]
 				if !ok {
-					fp := filepath.Join(root, r.URL.Path[1:])
-					writeInfo(fp)
+					//fp := filepath.Join(webroot, r.URL.Path[1:])
+					writeInfo("Serving static resource:", fp)
 					http.ServeFile(w, r, fp)
 					return
 				}
 				p := &Page{WebPort: WEBLOG_PORT}
-				renderTemplate(w, tmpl, p)
+				renderTemplate(w, fkey, p)
 				return
 			}
 			http.Error(w, "not found", 404)
 		})
-		http.Handle("/"+webroot+"/", http.FileServer(http.Dir(root)))
+		http.Handle("/"+webroot+"/", http.FileServer(http.Dir(webroot)))
 
 		// websocket
 		//http.Handle("/echo", websocket.Handler(echoServer))
@@ -87,4 +106,53 @@ func StartWebgui() os.Error {
 	// go http.ListenAndServe(":" + strconv.Itoa(WEBLOG_PORT), nil)
 
 	return nil
+}
+
+func createFileAndWriteText(fp string, text string) (err os.Error) {
+	dir, _ := filepath.Split(fp)
+	_, e := os.Stat(dir)
+	if e != nil {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			return
+		}
+	}
+
+	var f *os.File
+	/*
+	_, e = os.Stat(fp)
+	if e != nil {
+		writeInfo("Creating file:", fp)
+		f, err = os.Create(fp)
+	} else {
+		f, err = os.Open(fp)
+	}
+	*/
+	
+	writeInfo("Creating file:", fp)
+	f, err = os.Create(fp)
+
+	if err != nil {
+		return
+	}
+
+	defer f.Close()
+	_, err = io.WriteString(f, text)
+	return
+
+}
+
+func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
+	t, ok := templates[tmpl]
+	if !ok {
+		http.Error(w, fmt.Sprintf("template %s does not exist", tmpl), http.StatusInternalServerError)
+		return
+	}
+	ctype := "text/html; charset=utf-8"
+	w.Header().Set("Content-Type", ctype)
+	err := t.Execute(w, data)
+	if err != nil {
+		http.Error(w, err.String(), http.StatusInternalServerError)
+		return
+	}
 }

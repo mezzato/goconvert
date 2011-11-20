@@ -60,23 +60,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hi there!")
 }
 
-var webroot string = "web"
-
-func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
-	t, ok := templates[tmpl]
-	if !ok {
-		http.Error(w, fmt.Sprintf("template %s does not exist", tmpl), http.StatusInternalServerError)
-		return
-	}
-	ctype := "text/html; charset=utf-8"
-	w.Header().Set("Content-Type", ctype)
-	err := t.Execute(w, data)
-	if err != nil {
-		http.Error(w, err.String(), http.StatusInternalServerError)
-		return
-	}
-}
-
 func main() {
 
 	writeInfo(`

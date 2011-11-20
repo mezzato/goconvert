@@ -3,7 +3,7 @@ package main
 // webresources["index.html"] = `etc..`
 // webresources["css/style.css"] = `etc..` 
 func setVariables() {
-webresources["web/css/reset.css"] = `
+webresources["css/reset.css"] = `
 /* 
 html5doctor.com Reset Stylesheet
 v1.4.1 
@@ -107,7 +107,7 @@ hr {
 input, select {
     vertical-align:middle;
 }`
-webresources["web/css/style.css"] = `
+webresources["css/style.css"] = `
 body {
 	width: 100%;
 	font-family: font-family:sans-serif;
@@ -177,7 +177,7 @@ label {
 #messages pre.sent {
 	color: #f63;
 }`
-webresources["web/scripts/index.js"] = `
+webresources["scripts/index.js"] = `
 new function() {
 	var ws = null;
 	var connected = false;
@@ -306,7 +306,7 @@ new function() {
 $(function() {
 	WebSocketClient.init();
 });`
-webresources["web/scripts/jquery-1.7.js"] = `
+webresources["scripts/jquery-1.7.js"] = `
 /*!
  * jQuery JavaScript Library v1.7
  * http://jquery.com/
@@ -9608,7 +9608,7 @@ jQuery.each([ "Height", "Width" ], function( i, name ) {
 window.jQuery = window.$ = jQuery;
 })( window );
 `
-webresources["web/index.html"] = `
+webresources["index.html"] = `
 <!doctype html>
 <html>
 <head>
@@ -9631,13 +9631,15 @@ webresources["web/index.html"] = `
  -->
 <script type="text/javascript" src="scripts/jquery-1.7.js"></script>
 <script>
+/*
 var ws = $.websocket("ws://127.0.0.1:{{.WebPort |html}}/echo", {
         events: {
                 message: function(e) { $('#content').append(e.data + '<br>') }
         }
 });
+*/
 $('#message').change(function(){
-  ws.send('message', this.value);
+  //ws.send('message', this.value);
   this.value = '';
 });
 </script>
@@ -9645,7 +9647,7 @@ $('#message').change(function(){
 </html>
 
 `
-webresources["web/index.js"] = `
+webresources["index.js"] = `
 new function() {
 	var ws = null;
 	var connected = false;
@@ -9774,7 +9776,7 @@ new function() {
 $(function() {
 	WebSocketClient.init();
 });`
-webresources["web/test.html"] = `
+webresources["test.html"] = `
 <!DOCTYPE html>
 <html>
 <head>

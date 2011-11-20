@@ -20,13 +20,15 @@
  -->
 <script type="text/javascript" src="scripts/jquery-1.7.js"></script>
 <script>
+/*
 var ws = $.websocket("ws://127.0.0.1:{{.WebPort |html}}/echo", {
         events: {
                 message: function(e) { $('#content').append(e.data + '<br>') }
         }
 });
+*/
 $('#message').change(function(){
-  ws.send('message', this.value);
+  //ws.send('message', this.value);
   this.value = '';
 });
 </script>
