@@ -21,6 +21,7 @@ func echoServer(ws *websocket.Conn) {
 
 func StartWebgui() os.Error {
 
+	setVariables()
 	// start up a local web server
 
 	writeInfof("Starting up web server on port %d, click or copy this link to open up the page: %s\n", WEBLOG_PORT, hosturl)

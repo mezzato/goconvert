@@ -33,9 +33,4 @@ goconf:
 	goinstall goconf.googlecode.com/hg
 	
 resources2govars:
-	@echo extracting web resources and storing them in a go map
-	rm ${RESFILE}
-	@echo package main >> ${RESFILE}
-	@echo "// GENERATED FILE: Append here all the Make generated resources" >> ${RESFILE}
-	@echo "// webresources[\"index.html\"] = \`etc..\`" >> ${RESFILE}
-	@echo "// webresources[\"css/style.css\"] = \`etc..\` " >> ${RESFILE}
+	./resources2govars.sh
