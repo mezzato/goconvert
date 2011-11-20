@@ -14,7 +14,7 @@ import (
 	"websocket"
 	"go/build"
 	"template"
-	"http/httptest"
+	//"http/httptest"
 )
 
 type LogLevel int
@@ -148,15 +148,16 @@ func main() {
 		})
 		http.Handle("/"+webroot+"/", http.FileServer(http.Dir(root)))
 
-		
-		writeInfof("Serving at http://%s/\n", *httpListen)
-		go http.ListenAndServe(*httpListen, nil)
-		
 		// websocket
 		http.Handle("/echo", websocket.Handler(echoServer))
-    	server := httptest.NewServer(nil)
-    	serverAddr := server.Listener.Addr().String()
-    	log.Print("Test WebSocket server listening on ", serverAddr)
+		//http.Handle("/echo", websocket.Draft75Handler(echoServer))
+    	//server := httptest.NewServer(nil)
+    	//serverAddr := server.Listener.Addr().String()
+    	//log.Print("Test WebSocket server listening on ", serverAddr)
+    	
+    	writeInfof("Serving at http://%s/\n", *httpListen)
+		go http.ListenAndServe(*httpListen, nil)
+		
 		
 	}
 	// go http.ListenAndServe(":" + strconv.Itoa(WEBLOG_PORT), nil)
