@@ -75,8 +75,13 @@ Have fun!
 
 	`)
 
-	if err := StartWebgui(); err != nil {
+	browserCmd, err := StartWebgui()
+	if err != nil {
 		writeInfo("The local web server could not be started, using the console instead")
+	} else if browserCmd != nil {
+		writeInfo("Close the browser to shut down the process when you are finished!")
+		_, err = browserCmd.Process.Wait(0)
+		//return
 	}
 
 	settings, err := StartConsolegui()

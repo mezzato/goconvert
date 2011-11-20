@@ -10,6 +10,7 @@ import (
 	"strings"
 	"io"
 	"fmt"
+	"exec"
 	//"io/ioutil"
 )
 
@@ -24,7 +25,7 @@ func echoServer(ws *websocket.Conn) {
 }
 */
 
-func StartWebgui() os.Error {
+func StartWebgui() (browserCmd *exec.Cmd, err os.Error) {
 
 	setVariables()
 	// start up a local web server
@@ -33,7 +34,7 @@ func StartWebgui() os.Error {
 
 	// find and serve the goconvert files
 	//t, _, err := build.FindTree(basePkg)
-	var err os.Error
+	
 	if err != nil {
 		log.Printf("Couldn't find goconvert files: %v\n", err)
 	} else {
@@ -52,9 +53,9 @@ func StartWebgui() os.Error {
 				// write out to let it be served later as a static file
 				fp := filepath.Join(webroot, k)
 				writeInfo("Deploying resource to file system:", fp)
-				e := createFileAndWriteText(fp, v)
-				if e != nil {
-					return e
+				err = createFileAndWriteText(fp, v)
+				if err != nil {
+					return
 				}
 			}
 		}
@@ -100,12 +101,12 @@ func StartWebgui() os.Error {
 
 		writeInfof("Serving at http://%s/\n", serverAddr)
 		// go http.ListenAndServe(*httpListen, nil)
-
+		browserCmd, err = runBrowser(".", serverAddr)
 
 	}
 	// go http.ListenAndServe(":" + strconv.Itoa(WEBLOG_PORT), nil)
 
-	return nil
+	return
 }
 
 func createFileAndWriteText(fp string, text string) (err os.Error) {
@@ -155,4 +156,21 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 		http.Error(w, err.String(), http.StatusInternalServerError)
 		return
 	}
+}
+
+// run is a simple wrapper for exec.Run/Close
+func runBrowser(dir string, url string) (cmd *exec.Cmd, err os.Error) {
+	
+	browsers := []string{"google-chrome","chrome","firefox","iexplore"}
+	for _, b := range browsers{
+		cmd = exec.Command(b, url)
+		cmd.Dir = dir
+		//cmd.Env = envv
+		cmd.Stderr = os.Stderr
+		err = cmd.Start()
+		if err == nil{
+			return
+		}
+	}
+	return nil, os.NewError("No browser could be started. Do it manually!")
 }
