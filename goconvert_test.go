@@ -17,6 +17,7 @@ import (
 	"testing"
 	//"url"
 	"websocket"
+	"strings"
 )
 
 var serverAddr string
@@ -32,30 +33,37 @@ func startServer() {
 	log.Print("Test WebSocket server listening on ", serverAddr)
 }
 
-
 func TestEcho(t *testing.T) {
 	once.Do(startServer)
 
 	// websocket.Dial()
 	//ws, err := websocket.Dial("ws://localhost/ws", "", "http://localhost/");
-	client, err := websocket.Dial("ws://" + serverAddr + "/echo","tcp","http://localhost/")
-	if err != nil {
-		t.Fatal("dialing", err)
+	for {
+		client, err := websocket.Dial("ws://"+serverAddr+"/echo", "tcp", "http://localhost/")
+		if err != nil {
+			t.Fatal("dialing", err)
+		}
+
+		msg := []byte("hello, world\n")
+		if _, err := client.Write(msg); err != nil {
+			t.Errorf("Write: %v", err)
+		}
+		var actual_msg = make([]byte, 512)
+		n, err := client.Read(actual_msg)
+		if err != nil {
+			t.Errorf("Read: %v", err)
+		}
+		actual_msg = actual_msg[0:n]
+		if !bytes.Equal(msg, actual_msg) {
+			t.Errorf("Echo: expected %q got %q", msg, actual_msg)
+		}
+		client.Close()
+		r, e := askParameter("Press return to stop the server, type \"y\" to rerun the test: ")
+		r = strings.TrimSpace(r)
+
+		if e != nil || r != "y" {
+			break
+		}
 	}
 
-	msg := []byte("hello, world\n")
-	if _, err := client.Write(msg); err != nil {
-		t.Errorf("Write: %v", err)
-	}
-	var actual_msg = make([]byte, 512)
-	n, err := client.Read(actual_msg)
-	if err != nil {
-		t.Errorf("Read: %v", err)
-	}
-	actual_msg = actual_msg[0:n]
-	if !bytes.Equal(msg, actual_msg) {
-		t.Errorf("Echo: expected %q got %q", msg, actual_msg)
-	}
-	client.Close()
-	askParameter("Press return to stop the server") 
 }

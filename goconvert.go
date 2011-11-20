@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 	"http"
-	"io"
-	"websocket"
-	"go/build"
+	//"io"
+	//"websocket"
+
 	"template"
 	//"http/httptest"
 )
@@ -27,18 +27,14 @@ type Page struct {
 const (
 	Info LogLevel = 1 << iota
 	Verbose
-	WEBLOG_PORT = 4999
-	basePkg     = "goconvert.googlecode.com/hg"
+	basePkg = "goconvert.googlecode.com/hg"
 )
 
 var (
 	LogLevelForRun LogLevel = Info
 	argv0                   = os.Args[0]
-
-	hosturl    = fmt.Sprintf("127.0.0.1:%d", WEBLOG_PORT)
-	httpListen = flag.String("http", hosturl, "host:port to listen on")
-	htmlOutput = flag.Bool("html", false, "render program output as HTML")
-	templates  = make(map[string]*template.Template)
+	htmlOutput              = flag.Bool("html", false, "render program output as HTML")
+	templates               = make(map[string]*template.Template)
 )
 
 func writeLog(ll LogLevel, msgs ...interface{}) (n int, err os.Error) {
@@ -71,12 +67,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hi there!")
 }
 
-// Echo the data received on the Web Socket.
-func echoServer(ws *websocket.Conn) {
-	writeInfo("Message received from websocket")
-	io.Copy(ws, ws);
-}
-
 var webroot string = "web"
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
@@ -95,72 +85,6 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 }
 
 func main() {
-
-	// start up a local web server
-
-	writeInfof("Starting up web server on port %d, click or copy this link to open up the page: %s\n", WEBLOG_PORT, hosturl)
-
-	// find and serve the goconvert files
-	t, _, err := build.FindTree(basePkg)
-
-	if err != nil {
-		log.Printf("Couldn't find goconvert files: %v\n", err)
-	} else {
-		root := filepath.Join(t.SrcDir(), basePkg, webroot)
-
-		for _, tmpl := range []string{"index.html"} {
-			fp := filepath.Join(root, tmpl)
-			s, e := os.Stat(fp)
-			writeInfo("File", fp, "exists", e == nil && !s.IsDirectory())
-			t := template.Must(template.ParseFile(fp))
-			templates[tmpl] = t
-		}
-
-		writeInfo("Serving content from", root)
-
-
-
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			//writeInfo("Handler for / called. URL.Path = " + r.URL.Path)
-			if r.URL.Path == "/favicon.ico" { //|| r.URL.Path == "/" {
-				fn := filepath.Join(root, r.URL.Path[1:])
-				http.ServeFile(w, r, fn)
-				return
-			} else {
-				tmpl := r.URL.Path[1:]
-				if len(tmpl) == 0 {
-					tmpl = "index.html"
-				}
-				//fn := filepath.Join(root, r.URL.Path[1:])
-				//http.ServeFile(w, r, fn)
-				_, ok := templates[tmpl]
-				if !ok {
-					fp := filepath.Join(root, r.URL.Path[1:])
-					writeInfo(fp)
-					http.ServeFile(w, r, fp)
-					return
-				}
-				p := &Page{WebPort: WEBLOG_PORT}
-				renderTemplate(w, tmpl, p)
-				return
-			}
-			http.Error(w, "not found", 404)
-		})
-		http.Handle("/"+webroot+"/", http.FileServer(http.Dir(root)))
-
-		// websocket
-		http.Handle("/echo", websocket.Handler(echoServer))
-		//http.Handle("/echo", websocket.Draft75Handler(echoServer))
-    	//server := httptest.NewServer(nil)
-    	//serverAddr := server.Listener.Addr().String()
-    	//log.Print("Test WebSocket server listening on ", serverAddr)
-    	
-    	writeInfof("Serving at http://%s/\n", *httpListen)
-		go http.ListenAndServe(*httpListen, nil)
-		
-		
-	}
-	// go http.ListenAndServe(":" + strconv.Itoa(WEBLOG_PORT), nil)
 
 	writeInfo(`
 goconvert is a command line tool to convert, archive and upload images to an ftp server.
