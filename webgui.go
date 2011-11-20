@@ -5,11 +5,11 @@ import (
 	"go/build"
 	"path/filepath"
 	"http"
-	//"io"
-	//"websocket"
 	"log"
 	"template"
 )
+
+var webresources = make(map[string] string)
 
 /*
 // Echo the data received on the Web Socket.

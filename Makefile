@@ -15,6 +15,7 @@ GOFILES=\
   webserver.go\
   webgui.go\
   consolegui.go\
+  webresources.go\
   
 include $(GOROOT)/src/Make.cmd
 
