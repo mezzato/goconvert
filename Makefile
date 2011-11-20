@@ -6,6 +6,8 @@ PREREQ+=goconf
 
 TARG=goconvert
 
+#GOPATH=goconvert.googlecode.com/hg
+
 GOFILES=\
   goconvert.go\
   settings.go\

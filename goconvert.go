@@ -10,8 +10,11 @@ import (
 	"strconv"
 	"strings"
 	"http"
+	"io"
+	"websocket"
 	"go/build"
 	"template"
+	"http/httptest"
 )
 
 type LogLevel int
@@ -68,6 +71,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hi there!")
 }
 
+// Echo the data received on the Web Socket.
+func echoServer(ws *websocket.Conn) {
+	writeInfo("Message received from websocket")
+	io.Copy(ws, ws);
+}
+
 var webroot string = "web"
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
@@ -109,6 +118,8 @@ func main() {
 
 		writeInfo("Serving content from", root)
 
+
+
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			//writeInfo("Handler for / called. URL.Path = " + r.URL.Path)
 			if r.URL.Path == "/favicon.ico" { //|| r.URL.Path == "/" {
@@ -122,6 +133,13 @@ func main() {
 				}
 				//fn := filepath.Join(root, r.URL.Path[1:])
 				//http.ServeFile(w, r, fn)
+				_, ok := templates[tmpl]
+				if !ok {
+					fp := filepath.Join(root, r.URL.Path[1:])
+					writeInfo(fp)
+					http.ServeFile(w, r, fp)
+					return
+				}
 				p := &Page{WebPort: WEBLOG_PORT}
 				renderTemplate(w, tmpl, p)
 				return
@@ -130,8 +148,16 @@ func main() {
 		})
 		http.Handle("/"+webroot+"/", http.FileServer(http.Dir(root)))
 
+		
 		writeInfof("Serving at http://%s/\n", *httpListen)
 		go http.ListenAndServe(*httpListen, nil)
+		
+		// websocket
+		http.Handle("/echo", websocket.Handler(echoServer))
+    	server := httptest.NewServer(nil)
+    	serverAddr := server.Listener.Addr().String()
+    	log.Print("Test WebSocket server listening on ", serverAddr)
+		
 	}
 	// go http.ListenAndServe(":" + strconv.Itoa(WEBLOG_PORT), nil)
 
