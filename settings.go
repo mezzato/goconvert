@@ -56,6 +56,7 @@ func (sets *ConversionSettings) AreaInPixed() int {
 type Settings struct {
 	SaveConfig               bool
 	CollName                 string
+	SourceDir                string
 	PublishDir               string
 	HomeDir                  string
 	PiwigoGalleryDir         string
@@ -68,6 +69,7 @@ func newSettings() *Settings {
 	s := new(Settings)
 	s.ConversionSettings = new(ConversionSettings)
 	s.FtpSettings = new(FtpSettings)
+	s.SourceDir = "."
 	return s
 }
 
@@ -235,7 +237,7 @@ func (s *Settings) GetConfigQuestions(mandatoryOnly bool) (l map[string]*Questio
 	return
 }
 
-func AskForSettings(collName string) (s *Settings, err os.Error) {
+func AskForSettings(collName string, srcfolder string) (s *Settings, err os.Error) {
 
 	var newSettingsFile bool
 
@@ -315,6 +317,7 @@ func AskForSettings(collName string) (s *Settings, err os.Error) {
 	}
 
 	s.CollName = collName
+	s.SourceDir = srcfolder
 
 	if skipFtp {
 		fmt.Println("\nTHE FTP UPLOAD WILL BE SKIPPED! If you want to use it restart the conversion without using any saved settings.\n")

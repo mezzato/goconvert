@@ -14,6 +14,7 @@ GOFILES=\
   imgconvert.go\
   webserver.go\
   webgui.go\
+  consolegui.go\
   
 include $(GOROOT)/src/Make.cmd
 
