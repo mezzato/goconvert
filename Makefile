@@ -1,10 +1,14 @@
 include $(GOROOT)/src/Make.inc
 
+PREREQ+=resources2govars
 PREREQ+=ftp4go
 PREREQ+=exif4go
 PREREQ+=goconf
 
 TARG=goconvert
+
+RESFOLDER = web
+RESFILE = webresources.go
 
 #GOPATH=goconvert.googlecode.com/hg
 
@@ -15,7 +19,7 @@ GOFILES=\
   webserver.go\
   webgui.go\
   consolegui.go\
-  webresources.go\
+  ${RESFILE}\
   
 include $(GOROOT)/src/Make.cmd
 
@@ -27,3 +31,11 @@ ftp4go:
 
 goconf:
 	goinstall goconf.googlecode.com/hg
+	
+resources2govars:
+	@echo extracting web resources and storing them in a go map
+	rm ${RESFILE}
+	@echo package main >> ${RESFILE}
+	@echo "// GENERATED FILE: Append here all the Make generated resources" >> ${RESFILE}
+	@echo "// webresources[\"index.html\"] = \`etc..\`" >> ${RESFILE}
+	@echo "// webresources[\"css/style.css\"] = \`etc..\` " >> ${RESFILE}
