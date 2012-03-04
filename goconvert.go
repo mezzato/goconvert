@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"fmt"
 	"os"
-	ftp4go "ftp4go.googlecode.com/hg/ftp4go"
+	ftp4go "code.google.com/p/ftp4go"
 	"flag"
 	"http"
 	"template"

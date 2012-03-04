@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 	"strconv"
-	exif4go "exif4go.googlecode.com/hg/exif4go"
+	exif4go "code.google.com/p/exif4go"
 	"path/filepath"
 	"sort"
 	"strings"
