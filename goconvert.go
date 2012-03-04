@@ -1,13 +1,14 @@
 package main
 
 import (
-	"path/filepath"
-	"fmt"
-	"os"
 	ftp4go "code.google.com/p/ftp4go"
+	"errors"
 	"flag"
-	"http"
-	"template"
+	"fmt"
+	"html/template"
+	"net/http"
+	"os"
+	"path/filepath"
 )
 
 type LogLevel int
@@ -30,29 +31,29 @@ var (
 	templates               = make(map[string]*template.Template)
 )
 
-func writeLog(ll LogLevel, msgs ...interface{}) (n int, err os.Error) {
+func writeLog(ll LogLevel, msgs ...interface{}) (n int, err error) {
 	if ll <= LogLevelForRun {
 		return fmt.Println(msgs...)
 	}
 	return
 }
 
-func writeLogf(ll LogLevel, format string, msgs ...interface{}) (n int, err os.Error) {
+func writeLogf(ll LogLevel, format string, msgs ...interface{}) (n int, err error) {
 	if ll <= LogLevelForRun {
 		return fmt.Printf(format, msgs...)
 	}
 	return
 }
 
-func writeInfo(msgs ...interface{}) (n int, err os.Error) {
+func writeInfo(msgs ...interface{}) (n int, err error) {
 	return writeLog(Info, msgs...)
 }
 
-func writeInfof(format string, msgs ...interface{}) (n int, err os.Error) {
+func writeInfof(format string, msgs ...interface{}) (n int, err error) {
 	return writeLogf(Info, format, msgs...)
 }
 
-func writeVerbose(msgs ...interface{}) (n int, err os.Error) {
+func writeVerbose(msgs ...interface{}) (n int, err error) {
 	return writeLog(Verbose, msgs...)
 }
 
@@ -80,7 +81,7 @@ Have fun!
 		writeInfo("The local web server could not be started, using the console instead")
 	} else if browserCmd != nil {
 		writeInfo("Close the browser to shut down the process when you are finished!")
-		_, err = browserCmd.Process.Wait(0)
+		_, err = browserCmd.Process.Wait()
 		//return
 	}
 
@@ -128,7 +129,7 @@ Have fun!
 	// connect
 	_, err = ftpClient.Connect(settings.FtpSettings.Address, ftp4go.DefaultFtpPort)
 	if err != nil {
-		writeInfo("The FTP connection could not be established, error: ", err.String())
+		writeInfo("The FTP connection could not be established, error: ", err.Error())
 		os.Exit(1)
 	}
 
@@ -136,7 +137,7 @@ Have fun!
 
 	_, err = ftpClient.Login(settings.FtpSettings.Username, settings.FtpSettings.Password, "")
 	if err != nil {
-		writeInfo("The FTP login was invalid, error: ", err.String())
+		writeInfo("The FTP login was invalid, error: ", err.Error())
 		os.Exit(1)
 	}
 
@@ -157,7 +158,7 @@ Have fun!
 
 var EXCLUDED_DIRS []string = []string{"pwg_high"}
 
-func PublishCollToFtp(fc *ftp4go.FTP, localDir string, remoteRoorDir string, excludedDirs []string) (err os.Error) {
+func PublishCollToFtp(fc *ftp4go.FTP, localDir string, remoteRoorDir string, excludedDirs []string) (err error) {
 	writeInfo(fmt.Sprintf("Publishing to FTP root folder: %s, from local directory: %s.\nExcluded folders:%s", remoteRoorDir, localDir, excludedDirs))
 
 	collName := filepath.Base(localDir)
@@ -169,7 +170,7 @@ func PublishCollToFtp(fc *ftp4go.FTP, localDir string, remoteRoorDir string, exc
 			err = fc.RemoveRemoteDirTree(remoteDir)
 		*/
 	} else {
-		return os.NewError("The collection name can not be empty")
+		return errors.New("The collection name can not be empty")
 	}
 
 	writeInfo("Uploading folder tree:", filepath.Base(localDir))

@@ -8,16 +8,16 @@ import (
 	//"bufio"
 	"bytes"
 	//"fmt"
-	"http"
-	"http/httptest"
 	"io"
 	"log"
+	"net/http"
+	"net/http/httptest"
 	//"net"
 	"sync"
 	"testing"
 	//"url"
-	"websocket"
 	"strings"
+	"websocket"
 )
 
 var serverAddr string

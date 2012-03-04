@@ -1,22 +1,24 @@
 package main
 
 import (
+	"errors"
 	"os"
 	//"go/build"
-	"path/filepath"
-	"http"
-	"log"
-	"template"
-	"strings"
-	"io"
 	"fmt"
-	"exec"
+	"html/template"
+	"io"
+	"log"
+	"net/http"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	//"io/ioutil"
 )
 
 var webresources = make(map[string]string)
 
 var webroot string = "website"
+
 /*
 // Echo the data received on the Web Socket.
 func echoServer(ws *websocket.Conn) {
@@ -25,7 +27,7 @@ func echoServer(ws *websocket.Conn) {
 }
 */
 
-func StartWebgui() (browserCmd *exec.Cmd, err os.Error) {
+func StartWebgui() (browserCmd *exec.Cmd, err error) {
 
 	setVariables()
 	// start up a local web server
@@ -34,7 +36,7 @@ func StartWebgui() (browserCmd *exec.Cmd, err os.Error) {
 
 	// find and serve the goconvert files
 	//t, _, err := build.FindTree(basePkg)
-	
+
 	if err != nil {
 		log.Printf("Couldn't find goconvert files: %v\n", err)
 	} else {
@@ -109,7 +111,7 @@ func StartWebgui() (browserCmd *exec.Cmd, err os.Error) {
 	return
 }
 
-func createFileAndWriteText(fp string, text string) (err os.Error) {
+func createFileAndWriteText(fp string, text string) (err error) {
 	dir, _ := filepath.Split(fp)
 	_, e := os.Stat(dir)
 	if e != nil {
@@ -121,15 +123,15 @@ func createFileAndWriteText(fp string, text string) (err os.Error) {
 
 	var f *os.File
 	/*
-	_, e = os.Stat(fp)
-	if e != nil {
-		writeInfo("Creating file:", fp)
-		f, err = os.Create(fp)
-	} else {
-		f, err = os.Open(fp)
-	}
+		_, e = os.Stat(fp)
+		if e != nil {
+			writeInfo("Creating file:", fp)
+			f, err = os.Create(fp)
+		} else {
+			f, err = os.Open(fp)
+		}
 	*/
-	
+
 	writeInfo("Creating file:", fp)
 	f, err = os.Create(fp)
 
@@ -153,24 +155,24 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 	w.Header().Set("Content-Type", ctype)
 	err := t.Execute(w, data)
 	if err != nil {
-		http.Error(w, err.String(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
 // run is a simple wrapper for exec.Run/Close
-func runBrowser(dir string, url string) (cmd *exec.Cmd, err os.Error) {
-	
-	browsers := []string{"google-chrome","chrome","firefox","iexplore"}
-	for _, b := range browsers{
+func runBrowser(dir string, url string) (cmd *exec.Cmd, err error) {
+
+	browsers := []string{"google-chrome", "chrome", "firefox", "iexplore"}
+	for _, b := range browsers {
 		cmd = exec.Command(b, url)
 		cmd.Dir = dir
 		//cmd.Env = envv
 		cmd.Stderr = os.Stderr
 		err = cmd.Start()
-		if err == nil{
+		if err == nil {
 			return
 		}
 	}
-	return nil, os.NewError("No browser could be started. Do it manually!")
+	return nil, errors.New("No browser could be started. Do it manually!")
 }

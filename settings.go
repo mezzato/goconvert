@@ -1,15 +1,16 @@
 package main
 
 import (
-	"path/filepath"
-	"syscall"
-	"fmt"
-	"os"
-	"strings"
 	conf "code.google.com/p/goconf"
+	"errors"
+	"fmt"
 	"log"
-	"strconv"
+	"os"
+	"path/filepath"
+	"runtime"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 const SETTINGS_FILE_NAME = "goconvert.conf"
@@ -121,7 +122,7 @@ func (sp *stringParam) String() string {
 type intParam int
 
 func (i *intParam) Set(s string) bool {
-	v, err := strconv.Btoi64(s, 0)
+	v, err := strconv.ParseInt(s, 0, 64)
 	*i = intParam(v)
 	return err == nil
 }
@@ -141,7 +142,7 @@ type Question struct {
 	question string
 }
 
-func LoadSettingsFromFile(c *conf.ConfigFile) (s *Settings, err os.Error) {
+func LoadSettingsFromFile(c *conf.ConfigFile) (s *Settings, err error) {
 	s = newSettings()
 
 	//s.CollName =
@@ -161,7 +162,7 @@ func LoadSettingsFromFile(c *conf.ConfigFile) (s *Settings, err os.Error) {
 	return
 }
 
-func SaveSettingsToFile(s *Settings) (err os.Error) {
+func SaveSettingsToFile(s *Settings) (err error) {
 
 	d, _ := filepath.Split(argv0)
 	fn := filepath.Join(d, SETTINGS_FILE_NAME)
@@ -178,7 +179,7 @@ func SaveSettingsToFile(s *Settings) (err os.Error) {
 	c.AddOption(SECTION_CONVERT, OPTION_CONVERT_WIDTH, strconv.Itoa(s.ConversionSettings.Width))
 	c.AddOption(SECTION_CONVERT, OPTION_CONVERT_HEIGHT, strconv.Itoa(s.ConversionSettings.Height))
 	c.AddOption(SECTION_CONVERT, OPTION_CONVERT_NOSIMULTANEOUSRESIZE, strconv.Itoa(s.ConversionSettings.NoSimultaneousResize))
-	c.AddOption(SECTION_CONVERT, OPTION_CONVERT_MOVEORIGINAL, strconv.Btoa(s.ConversionSettings.MoveOriginal))
+	c.AddOption(SECTION_CONVERT, OPTION_CONVERT_MOVEORIGINAL, strconv.FormatBool(s.ConversionSettings.MoveOriginal))
 
 	c.AddSection(SECTION_FTP)
 	c.AddOption(SECTION_FTP, OPTION_FTP_ADDRESS, s.FtpSettings.Address)
@@ -237,7 +238,7 @@ func (s *Settings) GetConfigQuestions(mandatoryOnly bool) (l map[string]*Questio
 	return
 }
 
-func AskForSettings(collName string, srcfolder string) (s *Settings, err os.Error) {
+func AskForSettings(collName string, srcfolder string) (s *Settings, err error) {
 
 	var newSettingsFile bool
 
@@ -249,7 +250,7 @@ func AskForSettings(collName string, srcfolder string) (s *Settings, err os.Erro
 	if _, err = os.Stat(fn); err != nil {
 		newSettingsFile = true
 	} else if c, err = conf.ReadConfigFile(fn); err != nil {
-		return nil, os.NewError(fmt.Sprintf("Error reading the file %s", fn))
+		return nil, errors.New(fmt.Sprintf("Error reading the file %s", fn))
 	}
 
 	var useFile bool
@@ -328,19 +329,19 @@ func AskForSettings(collName string, srcfolder string) (s *Settings, err os.Erro
 }
 
 func GetHomeDir() string {
-	var homeDir string = os.ShellExpand("$HOME")
+	var homeDir string = os.ExpandEnv("$HOME")
 	if len(homeDir) == 0 {
-		switch syscall.OS {
+		switch runtime.GOOS {
 		case "windows":
-			homeDir = filepath.Join(os.ShellExpand("$HOMEDRIVE"), os.ShellExpand("$HOMEPATH"))
+			homeDir = filepath.Join(os.ExpandEnv("$HOMEDRIVE"), os.ExpandEnv("$HOMEPATH"))
 		default:
-			homeDir = os.ShellExpand("$HOME")
+			homeDir = os.ExpandEnv("$HOME")
 		}
 	}
 	return homeDir
 }
 
-func askParameter(question string) (inputValue string, err os.Error) {
+func askParameter(question string) (inputValue string, err error) {
 	fmt.Print(question)
 	//originalStdout := os.Stdout
 	//os.Stdout, _ = os.OpenFile(os.DevNull, os.O_RDONLY, 0)

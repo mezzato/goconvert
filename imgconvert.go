@@ -1,20 +1,21 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"time"
-	"strconv"
+	"bytes"
 	exif4go "code.google.com/p/exif4go"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
-	"exec"
-	"bytes"
-	"io"
+	"time"
 )
 
-func getFileExifInfo(fp string) (timestamp string, sortkey string, err os.Error) {
+func getFileExifInfo(fp string) (timestamp string, sortkey string, err error) {
 	f, err := os.Open(fp)
 	if err != nil {
 		return
@@ -27,11 +28,11 @@ func getFileExifInfo(fp string) (timestamp string, sortkey string, err os.Error)
 		return
 	}
 	if tags == nil {
-		err = os.NewError("No EXIF information for file: " + fp)
+		err = errors.New("No EXIF information for file: " + fp)
 		return
 	}
 
-	var t *time.Time
+	var t time.Time
 	if tag, ok := tags["Image DateTime"]; ok {
 		// t, err = time.Parse("%Y:%m:%d %H:%M:%S", tag.Values[0]) //[0:6]
 		t, err = time.Parse("2006:01:02 15:04:05", tag.Values[0])
@@ -40,10 +41,10 @@ func getFileExifInfo(fp string) (timestamp string, sortkey string, err os.Error)
 		}
 	} else {
 		// Ensure date is present
-		t = time.LocalTime()
+		t = time.Now()
 	}
 
-	timestamp = strconv.Itoa64(t.Seconds())
+	timestamp = strconv.FormatInt(t.Unix(), 10)
 	sortkey = t.Format("20060102")
 
 	return
@@ -61,7 +62,7 @@ type imgFile struct {
 	path      string
 }
 
-func newImgFile(fpath string) (i *imgFile, err os.Error) {
+func newImgFile(fpath string) (i *imgFile, err error) {
 	var ts, sk string
 	ts, sk, err = getFileExifInfo(fpath)
 	if err != nil {
@@ -81,7 +82,7 @@ type imgFolder struct {
 	collectionArchiveFolder string
 }
 
-func newImgFolder(collName string, iFolder string, publishFolder string, archiveSubfolderName string) (f *imgFolder, err os.Error) {
+func newImgFolder(collName string, iFolder string, publishFolder string, archiveSubfolderName string) (f *imgFolder, err error) {
 	f = new(imgFolder)
 
 	f.CollName = collName
@@ -110,9 +111,9 @@ func newImgFolder(collName string, iFolder string, publishFolder string, archive
 	return
 }
 
-func (f *imgFolder) getImgFiles() (imgFiles []*imgFile, err os.Error) {
+func (f *imgFolder) getImgFiles() (imgFiles []*imgFile, err error) {
 
-	var fi *os.FileInfo
+	var fi os.FileInfo
 	fi, err = os.Stat(f.ImgFolder)
 	if err != nil {
 		return
@@ -120,7 +121,7 @@ func (f *imgFolder) getImgFiles() (imgFiles []*imgFile, err os.Error) {
 
 	imgFiles = make([]*imgFile, 0, 50)
 	var files []string
-	if fi.IsDirectory() {
+	if fi.IsDir() {
 		writeInfo("Gettings image files in folder", f.ImgFolder)
 		gs := filepath.Join(f.ImgFolder, "*")
 		files, _ = filepath.Glob(gs) // find all files in folder
@@ -152,12 +153,12 @@ func (f *imgFolder) getImgFiles() (imgFiles []*imgFile, err os.Error) {
 }
 
 func Convert(collname string,
-srcfolder string,
-publishfolder string,
-archivesubfoldername string,
-convSettings *ConversionSettings) (collPublishFolder string, err os.Error) {
+	srcfolder string,
+	publishfolder string,
+	archivesubfoldername string,
+	convSettings *ConversionSettings) (collPublishFolder string, err error) {
 	writeInfo("Starting the image conversion")
-	startNanosecs := time.Nanoseconds()
+	startNanosecs := time.Now()
 
 	noOfWorkers := convSettings.NoSimultaneousResize
 
@@ -217,7 +218,7 @@ convSettings *ConversionSettings) (collPublishFolder string, err os.Error) {
 
 	quit <- true // stopping the server
 
-	writeInfo(fmt.Sprintf("The conversion took %.3f seconds", float32(time.Nanoseconds()-startNanosecs)/1e9))
+	writeInfo(fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
 
 	return imgFolder.collectionPublishFolder, nil
 }
@@ -257,13 +258,13 @@ type request struct {
 
 type response struct {
 	imgF  *imgFile
-	error os.Error
+	error error
 }
 
-type filehandler func(f *imgFile) (err os.Error)
+type filehandler func(f *imgFile) (err error)
 
 func createCompositeHandler(handlerChain []filehandler) (handler filehandler) {
-	var chainHandler = func(img *imgFile) (err os.Error) {
+	var chainHandler = func(img *imgFile) (err error) {
 		for _, h := range handlerChain {
 			if err = h(img); err != nil {
 				return err
@@ -276,19 +277,19 @@ func createCompositeHandler(handlerChain []filehandler) (handler filehandler) {
 }
 
 func createResizeHandler(collPublishFolder string, convSets []*imgParams) (handler filehandler) {
-	var resizeHandler = func(img *imgFile) (err os.Error) {
+	var resizeHandler = func(img *imgFile) (err error) {
 
 		writeVerbose(fmt.Sprintf("Resizing img: %s.", filepath.Base(img.path)))
 
 		for _, set := range convSets {
 			if len(set.cmdArgs) == 0 {
-				return os.NewError("Command arguments must be specified")
+				return errors.New("Command arguments must be specified")
 			}
 
 			newImgName := set.prefix + filepath.Base(img.path)
 			subFolderPath := filepath.Join(collPublishFolder, set.subFolderRelPath)
-			var fi *os.FileInfo
-			if fi, err = os.Stat(subFolderPath); err != nil || !fi.IsDirectory() {
+			var fi os.FileInfo
+			if fi, err = os.Stat(subFolderPath); err != nil || !fi.IsDir() {
 				// create dirs
 				writeVerbose("Creating folder:", subFolderPath)
 				if err = os.MkdirAll(subFolderPath, 0777); err != nil {
@@ -316,10 +317,10 @@ func createResizeHandler(collPublishFolder string, convSets []*imgParams) (handl
 }
 
 func createArchiveHandler(collArchiveFolder string, moveOriginal bool) (handler filehandler) {
-	var archiveHandler = func(img *imgFile) (err os.Error) {
+	var archiveHandler = func(img *imgFile) (err error) {
 
-		var fi *os.FileInfo
-		if fi, err = os.Stat(collArchiveFolder); err != nil || !fi.IsDirectory() {
+		var fi os.FileInfo
+		if fi, err = os.Stat(collArchiveFolder); err != nil || !fi.IsDir() {
 			// create dirs
 			writeVerbose("Creating folder:", collArchiveFolder)
 			if err = os.MkdirAll(collArchiveFolder, 0777); err != nil {
@@ -343,7 +344,7 @@ func createArchiveHandler(collArchiveFolder string, moveOriginal bool) (handler 
 			}
 			fi, _ = f.Stat()
 			// copy stats			
-			if err = os.Chtimes(movePath, fi.Atime_ns, fi.Mtime_ns); err != nil {
+			if err = os.Chtimes(movePath, fi.ModTime(), fi.ModTime()); err != nil {
 				return
 			}
 		}
@@ -365,7 +366,7 @@ func (c *Cmd) String() string {
 }
 
 // Run executes the Cmd.
-func (c *Cmd) Run() os.Error {
+func (c *Cmd) Run() error {
 	out := new(bytes.Buffer)
 	cmd := exec.Command(c.Args[0], c.Args[1:]...)
 	cmd.Dir = c.Dir

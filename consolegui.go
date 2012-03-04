@@ -1,15 +1,16 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"errors"
 	"flag"
+	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 )
 
-func StartConsolegui() (settings *Settings, err os.Error) {
+func StartConsolegui() (settings *Settings, err error) {
 
 	srcfolderFlag := flag.String("f", ".", "the image folder")
 	collFlag := flag.String("c", "collectionnamewithoutspaces", "the collection name")
@@ -23,9 +24,9 @@ func StartConsolegui() (settings *Settings, err os.Error) {
 	LogLevelForRun = LogLevel(*LogLevelForRunFlag)
 
 	// check existence
-	if fi, err := os.Stat(srcfolder); err != nil || !fi.IsDirectory() {
+	if fi, err := os.Stat(srcfolder); err != nil || !fi.IsDir() {
 		//writeInfo(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))
-		return nil, os.NewError(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))
+		return nil, errors.New(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))
 		//os.Exit(1)
 	}
 
@@ -34,7 +35,7 @@ func StartConsolegui() (settings *Settings, err os.Error) {
 	if collName == "collectionnamewithoutspaces" {
 		writeInfo("No collection name was specified, this is required to store your images\n")
 		flag.Usage()
-		return nil, os.NewError("No collection name was specified, this is required to store your images\n")
+		return nil, errors.New("No collection name was specified, this is required to store your images\n")
 		//os.Exit(1)
 	}
 

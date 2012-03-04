@@ -5,8 +5,8 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
-	"http"
 	"net"
+	"net/http"
 	"os"
 	"time"
 )
@@ -33,7 +33,7 @@ type historyListener struct {
 	history []net.Conn
 }
 
-func (hs *historyListener) Accept() (c net.Conn, err os.Error) {
+func (hs *historyListener) Accept() (c net.Conn, err error) {
 	c, err = hs.Listener.Accept()
 	if err == nil {
 		hs.history = append(hs.history, c)
@@ -57,7 +57,7 @@ func NewServer(handler http.Handler) *Server {
 	ts := new(Server)
 	var l net.Listener
 	if *serve != "" {
-		var err os.Error
+		var err error
 		l, err = net.Listen("tcp", *serve)
 		if err != nil {
 			panic(fmt.Sprintf("httptest: failed to listen on %v: %v", *serve, err))
@@ -89,7 +89,7 @@ func NewTLSServer(handler http.Handler) *Server {
 
 	ts.TLS = &tls.Config{
 		Rand:         rand.Reader,
-		Time:         time.Seconds,
+		Time:         time.Now,
 		NextProtos:   []string{"http/1.1"},
 		Certificates: []tls.Certificate{cert},
 	}

@@ -1,9 +1,10 @@
 package main
+
 // GENERATED FILE: Append here all the Make generated resources
 // webresources["index.html"] = `etc..`
 // webresources["css/style.css"] = `etc..` 
 func setVariables() {
-webresources["css/reset.css"] = `
+	webresources["css/reset.css"] = `
 /* 
 html5doctor.com Reset Stylesheet
 v1.4.1 
@@ -107,7 +108,7 @@ hr {
 input, select {
     vertical-align:middle;
 }`
-webresources["css/style.css"] = `
+	webresources["css/style.css"] = `
 body {
 	width: 100%;
 	font-family: font-family:sans-serif;
@@ -177,7 +178,7 @@ label {
 #messages pre.sent {
 	color: #f63;
 }`
-webresources["scripts/index.js"] = `
+	webresources["scripts/index.js"] = `
 new function() {
 	var ws = null;
 	var connected = false;
@@ -306,7 +307,7 @@ new function() {
 $(function() {
 	WebSocketClient.init();
 });`
-webresources["scripts/jquery-1.7.js"] = `
+	webresources["scripts/jquery-1.7.js"] = `
 /*!
  * jQuery JavaScript Library v1.7
  * http://jquery.com/
@@ -9608,7 +9609,7 @@ jQuery.each([ "Height", "Width" ], function( i, name ) {
 window.jQuery = window.$ = jQuery;
 })( window );
 `
-webresources["index.html"] = `
+	webresources["index.html"] = `
 <!doctype html>
 <html>
 <head>
@@ -9647,7 +9648,7 @@ $('#message').change(function(){
 </html>
 
 `
-webresources["index.js"] = `
+	webresources["index.js"] = `
 new function() {
 	var ws = null;
 	var connected = false;
@@ -9776,7 +9777,7 @@ new function() {
 $(function() {
 	WebSocketClient.init();
 });`
-webresources["test.html"] = `
+	webresources["test.html"] = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -9819,4 +9820,5 @@ webresources["test.html"] = `
 <script type="text/javascript" src="scripts/index.js"></script>
 </body>
 </html>`
-return }
+	return
+}
