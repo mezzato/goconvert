@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"log"
+	"strconv"
+	"strings"
 )
 
 type LogLevel int
@@ -61,6 +64,69 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hi there!")
 }
 
+
+func ParseCommandLine() (usewebgui bool, sourcefolder string, collectionname string) {
+
+	webgui := flag.Bool("w", false, "whether to use a web browser instead of the command line")
+	srcfolder := flag.String("f", ".", "the image folder")
+	collname := flag.String("c", "collectionnamewithoutspaces", "the collection name")
+	LogLevelForRunFlag := flag.Int("l", int(Info), "The log level")
+	flag.Parse()
+	
+	LogLevelForRun = LogLevel(*LogLevelForRunFlag)
+	
+	return *webgui, *srcfolder, *collname
+}
+
+func GetSettings(srcfolder, collName string) (settings *Settings, err error) {
+	
+	if srcfolder == "." {
+		writeInfo("No source folder specified, using the current: '.'")
+	}
+
+	// check existence
+	if fi, err := os.Stat(srcfolder); err != nil || !fi.IsDir() {
+		//writeInfo(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))
+		return nil, errors.New(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))
+		//os.Exit(1)
+	}
+
+
+	if collName == "collectionnamewithoutspaces" {
+		writeInfo("No collection name was specified, this is required to store your images\n")
+		flag.Usage()
+		return nil, errors.New("No collection name was specified, this is required to store your images\n")
+		//os.Exit(1)
+	}
+
+	settings, err = AskForSettings(collName, srcfolder)
+	if err != nil {
+		log.Fatalf("A fatal error has occurred: %s", err)
+	}
+
+	var pad int = 30
+	var padString string = strconv.Itoa(pad)
+
+	var padS = func(s string) string {
+		return fmt.Sprintf("%-"+padString+"s", s) + ": %s\n"
+	}
+
+	writeInfof(strings.Repeat("-", pad*2) + "\n")
+	writeInfof("%"+padString+"s\n", "Settings")
+	writeInfof(padS("Image folder"), settings.SourceDir)
+	writeInfof(padS("Collection name"), settings.CollName)
+	writeInfof(padS("Home folder"), settings.HomeDir)
+	writeInfof(padS("Publish folder"), settings.PublishDir)
+	writeInfof(padS("Piwigo gallery"), settings.PiwigoGalleryDir)
+	writeInfof(padS("Number of resize processes"), strconv.Itoa(settings.ConversionSettings.NoSimultaneousResize))
+	writeInfof(padS("ftp server"), settings.FtpSettings.Address)
+	writeInfof(padS("ftp user"), settings.FtpSettings.Username)
+	writeInfof(strings.Repeat("-", pad*2) + "\n")
+
+	return settings, nil
+
+}
+
 func main() {
 
 	writeInfo(`
@@ -76,16 +142,27 @@ Have fun!
 
 	`)
 
-	browserCmd, err := StartWebgui()
-	if err != nil {
-		writeInfo("The local web server could not be started, using the console instead")
-	} else if browserCmd != nil {
-		writeInfo("Close the browser to shut down the process when you are finished!")
-		_, err = browserCmd.Process.Wait()
-		//return
+	usewebgui, srcfolder, collectionname := ParseCommandLine()
+	
+	if usewebgui {
+		browserCmd, server, err := StartWebgui()
+		if err != nil {
+			writeInfo("The local web server could not be started, using the console instead.")
+		} else
+		{
+			if browserCmd != nil {
+				writeInfo("Close the browser to shut down the process when you are finished.")
+				_, err = browserCmd.Process.Wait()
+			} else {
+				writeInfo("Open a browser manually and go the link specified. Press then Ctrl+C to shut down the process.")
+				<- server.Quit 
+			}
+			return
+		}
 	}
-
-	settings, err := StartConsolegui()
+	
+	settings, err := GetSettings(srcfolder, collectionname)
+	
 	if err != nil {
 		writeInfo("Error while collecting the settings:", err)
 		//return nil, os.NewError(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))

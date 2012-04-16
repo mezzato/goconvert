@@ -24,6 +24,7 @@ type Server struct {
 	URL      string // base URL of form http://ipaddr:port with no trailing slash
 	Listener net.Listener
 	TLS      *tls.Config // nil if not using using TLS
+	Quit	chan bool
 }
 
 // historyListener keeps track of all connections that it's ever
@@ -65,6 +66,7 @@ func NewServer(handler http.Handler) *Server {
 	} else {
 		l = newLocalListener()
 	}
+	ts.Quit = make(chan bool)
 	ts.Listener = &historyListener{l, make([]net.Conn, 0)}
 	ts.URL = "http://" + l.Addr().String()
 	server := &http.Server{Handler: handler}

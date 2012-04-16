@@ -27,7 +27,7 @@ func echoServer(ws *websocket.Conn) {
 }
 */
 
-func StartWebgui() (browserCmd *exec.Cmd, err error) {
+func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 
 	setVariables()
 	// start up a local web server
@@ -97,13 +97,13 @@ func StartWebgui() (browserCmd *exec.Cmd, err error) {
 		// websocket
 		//http.Handle("/echo", websocket.Handler(echoServer))
 		//http.Handle("/echo", websocket.Draft75Handler(echoServer))
-		server := NewServer(nil)
+		server = NewServer(nil)
 		serverAddr := server.Listener.Addr().String()
 		log.Print("Test WebSocket server listening on ", serverAddr)
 
 		writeInfof("Serving at http://%s/\n", serverAddr)
 		// go http.ListenAndServe(*httpListen, nil)
-		browserCmd, err = runBrowser(".", serverAddr)
+		browserCmd, _ = runBrowser(".", serverAddr)
 
 	}
 	// go http.ListenAndServe(":" + strconv.Itoa(WEBLOG_PORT), nil)
