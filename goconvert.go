@@ -6,10 +6,10 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -32,6 +32,7 @@ var (
 	argv0                   = os.Args[0]
 	htmlOutput              = flag.Bool("html", false, "render program output as HTML")
 	templates               = make(map[string]*template.Template)
+	Debug                   = false
 )
 
 func writeLog(ll LogLevel, msgs ...interface{}) (n int, err error) {
@@ -64,22 +65,23 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hi there!")
 }
 
-
 func ParseCommandLine() (usewebgui bool, sourcefolder string, collectionname string) {
 
+	debug := flag.Bool("d", false, "debug mode")
 	webgui := flag.Bool("w", false, "whether to use a web browser instead of the command line")
 	srcfolder := flag.String("f", ".", "the image folder")
 	collname := flag.String("c", "collectionnamewithoutspaces", "the collection name")
 	LogLevelForRunFlag := flag.Int("l", int(Info), "The log level")
 	flag.Parse()
-	
+
 	LogLevelForRun = LogLevel(*LogLevelForRunFlag)
-	
+	Debug = *debug
+
 	return *webgui, *srcfolder, *collname
 }
 
 func GetSettings(srcfolder, collName string) (settings *Settings, err error) {
-	
+
 	if srcfolder == "." {
 		writeInfo("No source folder specified, using the current: '.'")
 	}
@@ -90,7 +92,6 @@ func GetSettings(srcfolder, collName string) (settings *Settings, err error) {
 		return nil, errors.New(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))
 		//os.Exit(1)
 	}
-
 
 	if collName == "collectionnamewithoutspaces" {
 		writeInfo("No collection name was specified, this is required to store your images\n")
@@ -143,26 +144,25 @@ Have fun!
 	`)
 
 	usewebgui, srcfolder, collectionname := ParseCommandLine()
-	
+
 	if usewebgui {
 		browserCmd, server, err := StartWebgui()
 		if err != nil {
 			writeInfo("The local web server could not be started, using the console instead.")
-		} else
-		{
+		} else {
 			if browserCmd != nil {
 				writeInfo("Close the browser to shut down the process when you are finished.")
 				_, err = browserCmd.Process.Wait()
 			} else {
 				writeInfo("Open a browser manually and go the link specified. Press then Ctrl+C to shut down the process.")
-				<- server.Quit 
+				<-server.Quit
 			}
 			return
 		}
 	}
-	
+
 	settings, err := GetSettings(srcfolder, collectionname)
-	
+
 	if err != nil {
 		writeInfo("Error while collecting the settings:", err)
 		//return nil, os.NewError(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))

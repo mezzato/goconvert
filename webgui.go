@@ -45,7 +45,7 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 		for k, v := range webresources {
 			//fp := filepath.Join(root, tmpl)
 			//s, e := os.Stat(fp)
-			if strings.HasSuffix(k, "html") {
+			if !Debug && strings.HasSuffix(k, "html") {
 				//writeInfo("File", fp, "exists", e == nil && !s.IsDirectory())
 				writeInfo("File", k, "is a template")
 				t := template.Must(template.New(k).Parse(v))
@@ -146,7 +146,20 @@ func createFileAndWriteText(fp string, text string) (err error) {
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
-	t, ok := templates[tmpl]
+
+	ok := false
+	var t *template.Template
+
+	if Debug && strings.HasSuffix(tmpl, "html") {
+		fp := filepath.Join(webroot, tmpl)
+		s, e := os.Stat(fp)
+		if e == nil && !s.IsDir() {
+			t, e = template.ParseFiles(fp)
+			ok = e == nil
+		}
+	} else {
+		t, ok = templates[tmpl]
+	}
 	if !ok {
 		http.Error(w, fmt.Sprintf("template %s does not exist", tmpl), http.StatusInternalServerError)
 		return
