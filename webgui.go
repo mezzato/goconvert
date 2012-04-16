@@ -12,8 +12,33 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"encoding/json"
 	//"io/ioutil"
 )
+
+type Response struct {
+	Output string `json:"output"`
+	Errors string `json:"compile_errors"`
+}
+
+func compress(w http.ResponseWriter, req *http.Request) {
+	resp := new(Response)
+	//out, err := compile(req)
+	var err error
+	out, err := "Compressed successfully", nil
+	if err != nil {
+		if len(out)>0 {
+			resp.Errors = string(out)
+		} else {
+			resp.Errors = err.Error()
+		}
+	} else {
+		resp.Output = string(out)
+	}
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Println(err)
+	}
+}
 
 var webresources = make(map[string]string)
 
@@ -93,6 +118,8 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 			http.Error(w, "not found", 404)
 		})
 		http.Handle("/"+webroot+"/", http.FileServer(http.Dir(webroot)))
+		
+		http.HandleFunc("/compress", compress)
 
 		// websocket
 		//http.Handle("/echo", websocket.Handler(echoServer))
