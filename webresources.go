@@ -1,8 +1,9 @@
 package main
 
-// GENERATED FILE: Append here all the Make generated resources
-// webresources["index.html"] = %s
-// webresources["css/style.css"] = %s
+// GENERATED FILE: Append here all the resources to be exposed as variables
+// webresources["index.html"] = etc...
+// webresources["css/style.css"] = etc...
+
 func setVariables() {webresources["index.html"] = `
 <!doctype html>
 <html>
