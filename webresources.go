@@ -28,7 +28,12 @@ func setVariables() {webresources["index.html"] = `
 			<input type="button" id="compress" value="compress images" />
 		</p>
 	</section>
-
+	<section id="logsection">
+		<span>Output log</span>
+		<div id="log">
+		
+		</div>
+	</section>
 	<!-- 
 <script src="http://www.google.com/jsapi"></script>
 <script>google.load("jquery", "1.3")</script>
@@ -37,34 +42,69 @@ func setVariables() {webresources["index.html"] = `
  -->
 	<script type="text/javascript" src="scripts/jquery-1.7.js"></script>
 	<script>
+	
+		$(function(){
+			var pollHandler = function(op, poll_interval_msec, timeout_msec){
+				t = 0;
+				var doPoll = function(){
+				    $.ajax('/' + op +'/status', {
+							data: null,
+							type: "POST",
+							dataType: "json",
+							success: function(data) {
+						        //alert(data);  // process results here
+						        if (timeout_msec <0 || t < timeout_msec) {
+						        	t += poll_interval_msec;
+						        	setTimeout(doPoll,poll_interval_msec);
+						        } else {
+									alert('timed out');					        	
+						        }
+							},
+							error: function() {
+								alert('error');
+							}
+						});
+					};
+					
+				return doPoll;
+			};
+		
 		/*
-		 var ws = $.websocket("ws://127.0.0.1:{{.WebPort |html}}/echo", {
-		 events: {
-		 message: function(e) { $('#content').append(e.data + '<br>') }
-		 }
-		 });
-		 */
-		var data = {folder: $("#folder").val(), collection: $("#collection").val()};
-		$('#compress').click(function() {
-			$.ajax("/compress", {
-				data: data,
-				type: "POST",
-				dataType: "json",
-				success: function(data) {
-					if (!data) {
-						return;
+			 var ws = $.websocket("ws://127.0.0.1:{{.WebPort |html}}/echo", {
+			 events: {
+			 message: function(e) { $('#content').append(e.data + '<br>') }
+			 }
+			 });
+			 */
+			var data = {folder: $("#folder").val(), collection: $("#collection").val()};
+			$('#compress').click(function() {
+				$.ajax("/compress", {
+					data: data,
+					type: "POST",
+					dataType: "json",
+					success: function(data) {
+						if (!data) {
+							return;
+						}
+						if (data.compile_errors != "") {
+							setOutput(data.compile_errors, true);
+							highlightErrors(data.compile_errors);
+							return;
+						}
+						pollfunc = pollHandler("compress", 1000, 5000);
+						writeLog(data.output);
+						pollfunc();
+					},
+					error: function() {
+						alert('error');
 					}
-					if (data.compile_errors != "") {
-						setOutput(data.compile_errors, true);
-						highlightErrors(data.compile_errors);
-						return;
-					}
-					alert(data.output);
-				},
-				error: function() {
-					alert('error');
-				}
+				});
 			});
+			
+			var logdiv = $('#log');
+			var writeLog = function(msg){
+				logdiv.append('<p>' + msg + '</p>');
+			}
 		});
 	</script>
 </body>

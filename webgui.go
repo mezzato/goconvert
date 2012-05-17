@@ -40,6 +40,25 @@ func compress(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func compressStatus(w http.ResponseWriter, req *http.Request) {
+	resp := new(Response)
+	//out, err := compile(req)
+	var err error
+	out, err := "compressoin update", nil
+	if err != nil {
+		if len(out)>0 {
+			resp.Errors = string(out)
+		} else {
+			resp.Errors = err.Error()
+		}
+	} else {
+		resp.Output = string(out)
+	}
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Println(err)
+	}
+}
+
 var webresources = make(map[string]string)
 
 var webroot string = "website"
@@ -120,6 +139,7 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 		http.Handle("/"+webroot+"/", http.FileServer(http.Dir(webroot)))
 		
 		http.HandleFunc("/compress", compress)
+		http.HandleFunc("/compress/status", compressStatus)
 
 		// websocket
 		//http.Handle("/echo", websocket.Handler(echoServer))
