@@ -156,9 +156,8 @@ func Convert(collname string,
 	srcfolder string,
 	publishfolder string,
 	archivesubfoldername string,
-	convSettings *ConversionSettings) (collPublishFolder string, err error) {
+	convSettings *ConversionSettings) (responseChannel chan *response, quitChannel chan bool, fileno int, collPublishFolder string, err error) {
 	writeInfo("Starting the image conversion")
-	startNanosecs := time.Now()
 
 	noOfWorkers := convSettings.NoSimultaneousResize
 
@@ -195,32 +194,19 @@ func Convert(collname string,
 	respChannel := make(chan *response, len(imgFolder.imgFiles)) // put a buffer not to lock the feedback calls
 
 	writeVerbose(fmt.Sprintf("Number of images in folder: %d", len(imgFolder.imgFiles)))
-	for _, imgf := range imgFolder.imgFiles {
-		writeVerbose(fmt.Sprintf("Processing image file at: %s, date timestamp %s, sortkey %s", imgf.path, imgf.timestamp, imgf.sortkey))
 
-		req := &request{imgf, respChannel}
-		reqs <- req
-	}
+	// start feeding asynchronously
+	go func() {
+		for _, imgf := range imgFolder.imgFiles {
+			writeVerbose(fmt.Sprintf("Processing image file at: %s, date timestamp %s, sortkey %s", imgf.path, imgf.timestamp, imgf.sortkey))
 
-	// collect responses
-	writeInfo(fmt.Sprintf("Collecting results"))
-	//for e:= range respChannel{
-	for i := 0; i < len(imgFolder.imgFiles); i++ {
-
-		r := <-respChannel
-		fname := filepath.Base(r.imgF.path)
-		if r.error == nil {
-			writeInfof("Success, file %s resized and archived\n", fname)
-		} else {
-			writeInfo(fmt.Sprintf("Error, file %s, the error was %s", fname, r.error))
+			req := &request{imgf, respChannel}
+			reqs <- req
 		}
-	}
+	}()
 
-	quit <- true // stopping the server
+	return respChannel, quit, len(imgFolder.imgFiles), imgFolder.collectionPublishFolder, nil
 
-	writeInfo(fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
-
-	return imgFolder.collectionPublishFolder, nil
 }
 
 func startWorkers(h filehandler, noOfWorkers int) (reqs chan *request, quit chan bool) {

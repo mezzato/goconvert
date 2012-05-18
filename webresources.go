@@ -4,8 +4,7 @@ package main
 // webresources["index.html"] = etc...
 // webresources["css/style.css"] = etc...
 
-func setVariables() {
-	webresources["index.html"] = `
+func setVariables() {webresources["index.html"] = `
 <!doctype html>
 <html>
 <head>
@@ -93,7 +92,7 @@ func setVariables() {
 			$('#compress').click(function() {
 				var data = {folder: $("#folder").val(), collection: $("#collection").val()};	
 				$.ajax("/compress", {
-					data:  { data: JSON.stringify(data) },
+					data:  JSON.stringify(data),
 					type: "POST",
 					dataType: "json",
 					beforeSend: function(x) {
@@ -134,7 +133,7 @@ func setVariables() {
 </html>
 
 `
-	webresources["index.js"] = `new function() {
+webresources["index.js"] = `new function() {
 	var ws = null;
 	var connected = false;
 
@@ -262,7 +261,7 @@ func setVariables() {
 $(function() {
 	WebSocketClient.init();
 });`
-	webresources["test.html"] = `<!DOCTYPE html>
+webresources["test.html"] = `<!DOCTYPE html>
 <html>
 <head>
 	<meta charset="utf-8"/>
@@ -304,7 +303,7 @@ $(function() {
 <script type="text/javascript" src="scripts/index.js"></script>
 </body>
 </html>`
-	webresources["css/reset.css"] = `/* 
+webresources["css/reset.css"] = `/* 
 html5doctor.com Reset Stylesheet
 v1.4.1 
 2010-03-01
@@ -407,7 +406,7 @@ hr {
 input, select {
     vertical-align:middle;
 }`
-	webresources["css/style.css"] = `body {
+webresources["css/style.css"] = `body {
 	width: 100%;
 	font-family: font-family:sans-serif;
 	color: #000;
@@ -476,7 +475,7 @@ label {
 #messages pre.sent {
 	color: #f63;
 }`
-	webresources["scripts/index.js"] = `new function() {
+webresources["scripts/index.js"] = `new function() {
 	var ws = null;
 	var connected = false;
 
@@ -604,7 +603,7 @@ label {
 $(function() {
 	WebSocketClient.init();
 });`
-	webresources["scripts/jquery-1.7.js"] = `/*!
+webresources["scripts/jquery-1.7.js"] = `/*!
  * jQuery JavaScript Library v1.7
  * http://jquery.com/
  *
@@ -9906,5 +9905,4 @@ window.jQuery = window.$ = jQuery;
 })( window );
 `
 
-	return
-}
+return }

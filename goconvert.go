@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type LogLevel int
@@ -173,17 +174,8 @@ Have fun!
 		os.Exit(1)
 	}
 
-	collPublishFolder, err := Convert(
-		settings.CollName,
-		settings.SourceDir,
-		settings.PublishDir,
-		settings.PiwigoGalleryHighDirName,
-		settings.ConversionSettings)
-
-	if err != nil {
-		panic(err)
-	}
-	writeInfo("Images successfully resized")
+	// convert the images and collect the results
+	collPublishFolder := LaunchConversion(settings)
 
 	//ftpAddress := "mezzsplace.dyndns.org" //, _ := askParameter("The name of the ftp server:[mezzsplace.dyndns.org]", "mezzsplace.dyndns.org")
 	//username := "enrico"                  //, _ := askParameter("The name of the user:[enrico]", "enrico")
@@ -238,6 +230,40 @@ Have fun!
 }
 
 var EXCLUDED_DIRS []string = []string{"pwg_high"}
+
+func LaunchConversion(settings *Settings) (collPublishFolder string) {
+	startNanosecs := time.Now()
+	responseChannel, quitChannel, fileno, collPublishFolder, err := Convert(
+		settings.CollName,
+		settings.SourceDir,
+		settings.PublishDir,
+		settings.PiwigoGalleryHighDirName,
+		settings.ConversionSettings)
+
+	if err != nil {
+		panic(err)
+	}
+
+	// collect responses
+	writeInfo(fmt.Sprintf("Collecting results"))
+
+	for i := 0; i < fileno; i++ {
+
+		r := <-responseChannel
+		fname := filepath.Base(r.imgF.path)
+		if r.error == nil {
+			writeInfof("Success, file %s resized and archived\n", fname)
+		} else {
+			writeInfo(fmt.Sprintf("Error, file %s, the error was %s", fname, r.error))
+		}
+	}
+
+	quitChannel <- true // stopping the server
+	writeInfo(fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
+	writeInfo("Images successfully resized")
+
+	return collPublishFolder
+}
 
 func PublishCollToFtp(fc *ftp4go.FTP, localDir string, remoteRoorDir string, excludedDirs []string) (err error) {
 	writeInfo(fmt.Sprintf("Publishing to FTP root folder: %s, from local directory: %s.\nExcluded folders:%s", remoteRoorDir, localDir, excludedDirs))

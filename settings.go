@@ -74,6 +74,30 @@ func newSettings() *Settings {
 	return s
 }
 
+func NewDefaultSettings(collectionName string, sourceDir string) *Settings {
+
+	s := newSettings()
+
+	// mandatory settings
+	s.CollName = collectionName
+	s.SourceDir = sourceDir
+
+	homeDir := GetHomeDir()
+	s.HomeDir = homeDir
+	s.PublishDir = filepath.Join(homeDir, "Pictures")
+	s.PiwigoGalleryDir = filepath.Join(homeDir, "piwigo", "galleries")
+	s.PiwigoGalleryHighDirName = "pwg_high"
+	s.ConversionSettings.Width = 1024
+	s.ConversionSettings.Height = 768
+	s.ConversionSettings.NoSimultaneousResize = 1
+	s.ConversionSettings.MoveOriginal = false
+	s.FtpSettings.Address = ""
+	s.FtpSettings.Username = ""
+	s.SaveConfig = true
+
+	return s
+}
+
 type Param interface {
 	Set(string) bool
 	String() string

@@ -14,7 +14,23 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
+
+type appendSliceWriter []string
+
+func (w appendSliceWriter) Write(p []byte) (int, error) {
+	w = append(w, string(p))
+	return len(p), nil
+}
+
+func (w appendSliceWriter) ReadAll() (lines []string) {
+	n := len(w)
+	r := w[0 : n-1]
+	// trim the buffer
+	w = w[n:]
+	return r
+}
 
 type Response struct {
 	Output string `json:"output"`
@@ -27,6 +43,8 @@ type JsonRequest struct {
 }
 
 type requestProcessor func(r *http.Request) (msg string, err error)
+
+var logger appendSliceWriter
 
 func compress(r *http.Request) (msg string, err error) {
 	var reader io.Reader = r.Body
@@ -41,11 +59,21 @@ func compress(r *http.Request) (msg string, err error) {
 		fmt.Println(err)
 		return "", err
 	}
+
+	s := NewDefaultSettings(jsonR.CollectionName, jsonR.FolderPath)
+
+	launchConversionFromWeb(s, logger)
+
 	return fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonR.FolderPath, jsonR.CollectionName), err
 }
 
 func compressStatus(r *http.Request) (msg string, err error) {
-	return "compressed file:", nil
+	newLines := logger.ReadAll()
+	msg = ""
+	if len(newLines) > 0 {
+		msg = strings.Join(newLines, "\n")
+	}
+	return msg, nil
 }
 
 func wrapHandler(processor requestProcessor) func(w http.ResponseWriter, r *http.Request) {
@@ -84,6 +112,8 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 
 	setVariables()
 	// start up a local web server
+
+	logger = make(appendSliceWriter, 100)
 
 	writeInfof("Starting up web server on port %d, click or copy this link to open up the page: %s\n", WEBLOG_PORT, hosturl)
 
@@ -244,4 +274,43 @@ func runBrowser(dir string, url string) (cmd *exec.Cmd, err error) {
 		}
 	}
 	return nil, errors.New("No browser could be started. Do it manually!")
+}
+
+func launchConversionFromWeb(settings *Settings, logger io.Writer) (responseChannel chan *response, quitChannel chan bool) {
+	startNanosecs := time.Now()
+	responseChannel, quitChannel, fileno, collPublishFolder, err := Convert(
+		settings.CollName,
+		settings.SourceDir,
+		settings.PublishDir,
+		settings.PiwigoGalleryHighDirName,
+		settings.ConversionSettings)
+
+	if err != nil {
+		panic(err)
+	}
+
+	go func() {
+
+		// collect responses
+		writeInfo(fmt.Sprintf("Collecting results"))
+
+		for i := 0; i < fileno; i++ {
+
+			r := <-responseChannel
+			fname := filepath.Base(r.imgF.path)
+			var msg string
+			if r.error == nil {
+				msg = fmt.Sprintf("Success, file %s resized and archived\n", fname)
+			} else {
+				msg = fmt.Sprintf("Error, file %s, the error was %s", fname, r.error)
+			}
+			io.WriteString(logger, msg)
+		}
+
+		quitChannel <- true // stopping the server
+		io.WriteString(logger, fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
+		io.WriteString(logger, "Images successfully resized to folder: "+collPublishFolder)
+	}()
+
+	return responseChannel, quitChannel
 }
