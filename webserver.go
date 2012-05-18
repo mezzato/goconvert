@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const WEBLOG_PORT = 0 //4999
+const WEBLOG_PORT = 1234 //4999
 
 var (
 	hosturl = fmt.Sprintf("127.0.0.1:%d", WEBLOG_PORT)
@@ -43,12 +43,29 @@ func (hs *historyListener) Accept() (c net.Conn, err error) {
 }
 
 func newLocalListener() net.Listener {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+
+	tryToListen := func(port int) (net.Listener, error) {
+		url := fmt.Sprintf("%s:%d", "127.0.0.1", port)
+		l, err := net.Listen("tcp", url)
+		if err != nil {
+			l, err := net.Listen("tcp", url)
+			if l, err = net.Listen("tcp6", "[::1]:0"); err != nil {
+				return l, nil
+				//panic(fmt.Sprintf("httptest: failed to listen on a port: %v", err))
+			}
+		}
+		return l, err
+	}
+
+	l, err := tryToListen(WEBLOG_PORT)
 	if err != nil {
-		if l, err = net.Listen("tcp6", "[::1]:0"); err != nil {
+		if l, err = tryToListen(0); err != nil {
 			panic(fmt.Sprintf("httptest: failed to listen on a port: %v", err))
 		}
 	}
+
+	hosturl = l.Addr().String()
+
 	return l
 }
 

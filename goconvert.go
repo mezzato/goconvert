@@ -145,6 +145,10 @@ Have fun!
 
 	usewebgui, srcfolder, collectionname := ParseCommandLine()
 
+	// remove this once tested
+	usewebgui = true
+	Debug = true
+
 	if usewebgui {
 		browserCmd, server, err := StartWebgui()
 		if err != nil {

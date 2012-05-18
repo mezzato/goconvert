@@ -54,6 +54,7 @@ func setVariables() {webresources["index.html"] = `
 							success: function(data) {
 						        //alert(data);  // process results here
 						        if (timeout_msec <0 || t < timeout_msec) {
+						        	writeLog(data.output);
 						        	t += poll_interval_msec;
 						        	setTimeout(doPoll,poll_interval_msec);
 						        } else {
@@ -87,7 +88,7 @@ func setVariables() {webresources["index.html"] = `
 							return;
 						}
 						if (data.compile_errors != "") {
-							setOutput(data.compile_errors, true);
+							//setOutput(data.compile_errors, true);
 							highlightErrors(data.compile_errors);
 							return;
 						}

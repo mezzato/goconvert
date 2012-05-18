@@ -41,10 +41,10 @@ def launch_shell_cmd(cmd, title):
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
     output, unused_err = process.communicate()
     retcode = process.poll()
+    print(bytes.decode(output))
     if retcode:
         raise subprocess.CalledProcessError(retcode, cmd, output=output)
     
-    print(bytes.decode(output))
     return retcode
 
 def generate_resources():

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	//"go/build"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -12,7 +13,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"encoding/json"
 	//"io/ioutil"
 )
 
@@ -21,41 +21,25 @@ type Response struct {
 	Errors string `json:"compile_errors"`
 }
 
-func compress(w http.ResponseWriter, req *http.Request) {
-	resp := new(Response)
-	//out, err := compile(req)
-	var err error
-	out, err := "Compressed successfully", nil
-	if err != nil {
-		if len(out)>0 {
-			resp.Errors = string(out)
+func wrapHandler(msg string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resp := new(Response)
+		//out, err := compile(req)
+		var err error
+		out, err := msg, nil
+		if err != nil {
+			if len(out) > 0 {
+				resp.Errors = string(out)
+			} else {
+				resp.Errors = err.Error()
+			}
 		} else {
-			resp.Errors = err.Error()
+			resp.Output = string(out)
 		}
-	} else {
-		resp.Output = string(out)
-	}
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Println(err)
-	}
-}
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Println(err)
+		}
 
-func compressStatus(w http.ResponseWriter, req *http.Request) {
-	resp := new(Response)
-	//out, err := compile(req)
-	var err error
-	out, err := "compressoin update", nil
-	if err != nil {
-		if len(out)>0 {
-			resp.Errors = string(out)
-		} else {
-			resp.Errors = err.Error()
-		}
-	} else {
-		resp.Output = string(out)
-	}
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Println(err)
 	}
 }
 
@@ -137,9 +121,9 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 			http.Error(w, "not found", 404)
 		})
 		http.Handle("/"+webroot+"/", http.FileServer(http.Dir(webroot)))
-		
-		http.HandleFunc("/compress", compress)
-		http.HandleFunc("/compress/status", compressStatus)
+
+		http.HandleFunc("/compress", wrapHandler("compression started"))
+		http.HandleFunc("/compress/status", wrapHandler("compressing"))
 
 		// websocket
 		//http.Handle("/echo", websocket.Handler(echoServer))
