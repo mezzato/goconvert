@@ -87,5 +87,8 @@ if __name__ == '__main__':
     launch_shell_cmd('go build', 'go build')
     
     # install
-    launch_shell_cmd('go build', 'go install')
+    #launch_shell_cmd('go build', 'go install')
+    
+    # install
+    #launch_shell_cmd('goconvert.exe', 'goconvert.exe')
 

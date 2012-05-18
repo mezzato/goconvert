@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	//"io/ioutil"
 )
 
 type Response struct {
@@ -21,12 +21,37 @@ type Response struct {
 	Errors string `json:"compile_errors"`
 }
 
-func wrapHandler(msg string) func(w http.ResponseWriter, r *http.Request) {
+type JsonRequest struct {
+	FolderPath     string `json:"folder"`
+	CollectionName string `json:"collection"`
+}
+
+type requestProcessor func(r *http.Request) (msg string, err error)
+
+func compress(r *http.Request) (msg string, err error) {
+	var reader io.Reader = r.Body
+	b, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return "", err
+	}
+	var jsonR JsonRequest
+	fmt.Println("request body: " + string(b))
+	err = json.Unmarshal(b, &jsonR)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	return fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonR.FolderPath, jsonR.CollectionName), err
+}
+
+func compressStatus(r *http.Request) (msg string, err error) {
+	return "compressed file:", nil
+}
+
+func wrapHandler(processor requestProcessor) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := new(Response)
-		//out, err := compile(req)
-		var err error
-		out, err := msg, nil
+		out, err := processor(r)
 		if err != nil {
 			if len(out) > 0 {
 				resp.Errors = string(out)
@@ -122,8 +147,8 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 		})
 		http.Handle("/"+webroot+"/", http.FileServer(http.Dir(webroot)))
 
-		http.HandleFunc("/compress", wrapHandler("compression started"))
-		http.HandleFunc("/compress/status", wrapHandler("compressing"))
+		http.HandleFunc("/compress", wrapHandler(compress))
+		http.HandleFunc("/compress/status", wrapHandler(compressStatus))
 
 		// websocket
 		//http.Handle("/echo", websocket.Handler(echoServer))
