@@ -158,6 +158,7 @@ Have fun!
 			if browserCmd != nil {
 				writeInfo("Close the browser to shut down the process when you are finished.")
 				_, err = browserCmd.Process.Wait()
+				<-server.Quit
 			} else {
 				writeInfo("Open a browser manually and go the link specified. Press then Ctrl+C to shut down the process.")
 				<-server.Quit
