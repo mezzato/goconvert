@@ -17,24 +17,33 @@ import (
 	"time"
 )
 
-type appendSliceWriter []string
+type appendSliceWriter struct {
+	Buffer []string
+	Eof    bool
+}
 
-func (w appendSliceWriter) Write(p []byte) (int, error) {
-	w = append(w, string(p))
+func (s *appendSliceWriter) Write(p []byte) (int, error) {
+	s.Buffer = append(s.Buffer, strings.Split(string(p), "\n")...)
+	//writeInfof("The applendSliceWriter.Write slice length is: %d", len(w))
 	return len(p), nil
 }
 
-func (w appendSliceWriter) ReadAll() (lines []string) {
-	n := len(w)
-	r := w[0 : n-1]
+func (s *appendSliceWriter) ReadAll() (lines []string) {
+	n := len(s.Buffer)
+	if n == 0 {
+		return s.Buffer
+	}
+	//writeInfof("The applendSliceWriter.ReadAll() return slice length is: %d", n)
+	r := s.Buffer[0 : n-1]
 	// trim the buffer
-	w = w[n:]
+	s.Buffer = s.Buffer[n:]
 	return r
 }
 
 type Response struct {
-	Output string `json:"output"`
-	Errors string `json:"compile_errors"`
+	Messages []string `json:"messages"`
+	Errors   []string `json:"compile_errors"`
+	Eof      bool     `json:"eof"`
 }
 
 type JsonRequest struct {
@@ -42,52 +51,51 @@ type JsonRequest struct {
 	CollectionName string `json:"collection"`
 }
 
-type requestProcessor func(r *http.Request) (msg string, err error)
+type requestProcessor func(r *http.Request) (msgs []string, err error, eof bool)
 
-var logger appendSliceWriter
+var logger *appendSliceWriter
 
-func compress(r *http.Request) (msg string, err error) {
+func compress(r *http.Request) (msg []string, err error, eof bool) {
 	var reader io.Reader = r.Body
 	b, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return "", err
+		eof = true
+		return
 	}
 	var jsonR JsonRequest
 	fmt.Println("request body: " + string(b))
 	err = json.Unmarshal(b, &jsonR)
 	if err != nil {
 		fmt.Println(err)
-		return "", err
+		eof = true
+		return
 	}
 
 	s := NewDefaultSettings(jsonR.CollectionName, jsonR.FolderPath)
 
-	launchConversionFromWeb(s, logger)
+	_, _, err = launchConversionFromWeb(s, logger)
 
-	return fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonR.FolderPath, jsonR.CollectionName), err
+	return []string{fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonR.FolderPath, jsonR.CollectionName)}, err, err != nil
 }
 
-func compressStatus(r *http.Request) (msg string, err error) {
+func compressStatus(r *http.Request) (msgs []string, err error, eof bool) {
 	newLines := logger.ReadAll()
-	msg = ""
 	if len(newLines) > 0 {
-		msg = strings.Join(newLines, "\n")
+		msgs = newLines
 	}
-	return msg, nil
+	return msgs, nil, logger.Eof
 }
 
 func wrapHandler(processor requestProcessor) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := new(Response)
-		out, err := processor(r)
+		out, err, eof := processor(r)
 		if err != nil {
-			if len(out) > 0 {
-				resp.Errors = string(out)
-			} else {
-				resp.Errors = err.Error()
-			}
+			resp.Errors = []string{err.Error()}
+			resp.Eof = true
 		} else {
-			resp.Output = string(out)
+			resp.Messages = out
+			resp.Eof = eof
 		}
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			log.Println(err)
@@ -113,7 +121,7 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 	setVariables()
 	// start up a local web server
 
-	logger = make(appendSliceWriter, 100)
+	logger = &appendSliceWriter{Buffer: make([]string, 0, 100)}
 
 	writeInfof("Starting up web server on port %d, click or copy this link to open up the page: %s\n", WEBLOG_PORT, hosturl)
 
@@ -276,7 +284,7 @@ func runBrowser(dir string, url string) (cmd *exec.Cmd, err error) {
 	return nil, errors.New("No browser could be started. Do it manually!")
 }
 
-func launchConversionFromWeb(settings *Settings, logger io.Writer) (responseChannel chan *response, quitChannel chan bool) {
+func launchConversionFromWeb(settings *Settings, logger *appendSliceWriter) (responseChannel chan *response, quitChannel chan bool, err error) {
 	startNanosecs := time.Now()
 	responseChannel, quitChannel, fileno, collPublishFolder, err := Convert(
 		settings.CollName,
@@ -286,13 +294,13 @@ func launchConversionFromWeb(settings *Settings, logger io.Writer) (responseChan
 		settings.ConversionSettings)
 
 	if err != nil {
-		panic(err)
+		return
 	}
 
 	go func() {
 
 		// collect responses
-		writeInfo(fmt.Sprintf("Collecting results"))
+		writeInfo(fmt.Sprintf("Collecting results. Number of images: %d", fileno))
 
 		for i := 0; i < fileno; i++ {
 
@@ -300,17 +308,19 @@ func launchConversionFromWeb(settings *Settings, logger io.Writer) (responseChan
 			fname := filepath.Base(r.imgF.path)
 			var msg string
 			if r.error == nil {
-				msg = fmt.Sprintf("Success, file %s resized and archived\n", fname)
+				msg = fmt.Sprintf("Success, file %s resized and archived", fname)
 			} else {
 				msg = fmt.Sprintf("Error, file %s, the error was %s", fname, r.error)
 			}
+			writeInfo(msg)
 			io.WriteString(logger, msg)
 		}
 
 		quitChannel <- true // stopping the server
 		io.WriteString(logger, fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
 		io.WriteString(logger, "Images successfully resized to folder: "+collPublishFolder)
+		logger.Eof = true
 	}()
 
-	return responseChannel, quitChannel
+	return responseChannel, quitChannel, err
 }

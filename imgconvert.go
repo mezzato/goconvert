@@ -159,6 +159,33 @@ func Convert(collname string,
 	convSettings *ConversionSettings) (responseChannel chan *response, quitChannel chan bool, fileno int, collPublishFolder string, err error) {
 	writeInfo("Starting the image conversion")
 
+	var imgFolder *imgFolder
+
+	if len(collname) == 0 {
+		err = errors.New("The collection name can not be empty.")
+		return
+	}
+
+	imgFolder, err = newImgFolder(collname, srcfolder, publishfolder, archivesubfoldername)
+
+	if err != nil {
+		return
+	}
+
+	if len(imgFolder.imgFiles) == 0 {
+		err = errors.New("No image files in folder: " + srcfolder)
+		return
+	}
+
+	// check imgmagick
+	cmd := []string{"convert", "-version"}
+	c := &Cmd{Args: cmd}
+	writeVerbose("Testing ImageMagick installation")
+	err = c.Run()
+	if err != nil {
+		err = fmt.Errorf("Error running ImageMagick, check that it is correctly installed. Error: %s", err.Error())
+	}
+
 	noOfWorkers := convSettings.NoSimultaneousResize
 
 	smallPars := &imgParams{
@@ -176,13 +203,6 @@ func Convert(collname string,
 	convSets := []*imgParams{smallPars, thumbnailPars}
 	writeInfo("Processing images and saving to folder:", publishfolder)
 	writeVerbose("Number of conversion sets:", len(convSets))
-
-	var imgFolder *imgFolder
-	imgFolder, err = newImgFolder(collname, srcfolder, publishfolder, archivesubfoldername)
-
-	if err != nil {
-		return
-	}
 
 	res := createResizeHandler(imgFolder.collectionPublishFolder, convSets)
 	arch := createArchiveHandler(imgFolder.collectionArchiveFolder, convSettings.MoveOriginal)

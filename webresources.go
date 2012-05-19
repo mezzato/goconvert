@@ -234,10 +234,12 @@ webresources["index.html"] = `
 					        },
 							success: function(data) {
 						        //alert(data);  // process results here
-						        if (timeout_msec <0 || t < timeout_msec) {
-						        	writeLog(data.output);
+						        if (!data.eof && t < timeout_msec) {
+						        	writeLog(data.messages);
 						        	t += poll_interval_msec;
 						        	setTimeout(doPoll,poll_interval_msec);
+						        } else if (data.eof) {
+						        	alert('finished');
 						        } else {
 									alert('timed out');					        	
 						        }
@@ -274,13 +276,13 @@ webresources["index.html"] = `
 						if (!data) {
 							return;
 						}
-						if (data.compile_errors != "") {
+						if (data.compile_errors && len(data.compile_errors)>0) {
 							//setOutput(data.compile_errors, true);
 							highlightErrors(data.compile_errors);
 							return;
 						}
-						pollfunc = pollHandler("compress", 1000, 5000);
-						writeLog(data.output);
+						pollfunc = pollHandler("compress", 1000, 10000);
+						writeLog(data.messages);
 						pollfunc();
 					},
 					error: function() {
@@ -291,11 +293,19 @@ webresources["index.html"] = `
 			
 			var logdiv = $('#log');
 			var errordiv = $('#errors');
-			var writeLog = function(msg){
-				logdiv.append('<p>' + msg + '</p>');
+			var writeLog = function(messages){
+				var i;
+				if(!messages){return;}
+				for(i = 0;i< messages.length;i++){
+					logdiv.append('<p>' + messages[i] + '</p>');
+				}
 			}
-			var highlightErrors = function(msg){
-				errordiv.append('<p>' + msg + '</p>');
+			var highlightErrors = function(errors){
+				var i;
+				if(!errors){return;}
+				for(i = 0;i<errors.length;i++){
+					errordiv.append('<p>' + errors[i] + '</p>');
+				}
 			}
 		});
 	</script>
