@@ -239,6 +239,7 @@ webresources["index.html"] = `
 						        	t += poll_interval_msec;
 						        	setTimeout(doPoll,poll_interval_msec);
 						        } else if (data.eof) {
+						        	writeLog(data.messages);
 						        	alert('finished');
 						        } else {
 									alert('timed out');					        	

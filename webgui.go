@@ -23,17 +23,18 @@ type appendSliceWriter struct {
 }
 
 func (s *appendSliceWriter) Write(p []byte) (int, error) {
-	s.Buffer = append(s.Buffer, strings.Split(string(p), "\n")...)
+	s.Buffer = append(s.Buffer, string(p))
 	//writeInfof("The applendSliceWriter.Write slice length is: %d", len(w))
 	return len(p), nil
 }
 
 func (s *appendSliceWriter) ReadAll() (lines []string) {
 	n := len(s.Buffer)
+	//writeInfof("The applendSliceWriter.ReadAll() return slice length is: %d", n)
 	if n == 0 {
 		return s.Buffer
 	}
-	//writeInfof("The applendSliceWriter.ReadAll() return slice length is: %d", n)
+
 	r := s.Buffer[0 : n-1]
 	// trim the buffer
 	s.Buffer = s.Buffer[n:]
@@ -316,10 +317,10 @@ func launchConversionFromWeb(settings *Settings, logger *appendSliceWriter) (res
 			io.WriteString(logger, msg)
 		}
 
-		quitChannel <- true // stopping the server
 		io.WriteString(logger, fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
 		io.WriteString(logger, "Images successfully resized to folder: "+collPublishFolder)
 		logger.Eof = true
+		quitChannel <- true // stopping the server
 	}()
 
 	return responseChannel, quitChannel, err
