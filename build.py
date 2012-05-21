@@ -3,10 +3,10 @@
 import os, re, subprocess
 
 res_folder = 'web'
-res_file = 'webresources.go'
+res_file = 'webgui/webresources.go'
 re_resources = re.compile('^.+\.(?P<ext>html|css|js)$', re.IGNORECASE)
 
-res_file_header = """package main
+res_file_header = """package webgui
 
 // GENERATED FILE: Append here all the resources to be exposed as variables
 // webresources["index.html"] = etc...
@@ -51,7 +51,8 @@ def generate_resources():
     print('Extracting web resources and storing them in a go map\n')
     
     # use text file, utf-8, line buffering
-    with open(res_file, 'tw', encoding='utf-8', buffering=1) as res_f:
+    res_file_n = os.path.normpath(res_file)
+    with open(res_file_n, 'tw', encoding='utf-8', buffering=1) as res_f:
         
         res_f.write(res_file_header)
         

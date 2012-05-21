@@ -1,9 +1,11 @@
-package main
+package webgui
 
 import (
 	"errors"
 	"os"
 	//"go/build"
+	"code.google.com/p/goconvert/imageconvert"
+	"code.google.com/p/goconvert/settings"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -18,6 +20,15 @@ import (
 	"time"
 )
 
+type Page struct {
+	Title   string
+	WebPort int
+}
+
+var (
+	templates = make(map[string]*template.Template)
+)
+
 type appendSliceWriter struct {
 	Buffer []string
 	Eof    bool
@@ -25,13 +36,13 @@ type appendSliceWriter struct {
 
 func (s *appendSliceWriter) Write(p []byte) (int, error) {
 	s.Buffer = append(s.Buffer, string(p))
-	//writeInfof("The applendSliceWriter.Write slice length is: %d", len(w))
+	//imageconvert.WriteInfof("The applendSliceWriter.Write slice length is: %d", len(w))
 	return len(p), nil
 }
 
 func (s *appendSliceWriter) ReadAll() (lines []string) {
 	n := len(s.Buffer)
-	//writeInfof("The applendSliceWriter.ReadAll() return slice length is: %d", n)
+	//imageconvert.WriteInfof("The applendSliceWriter.ReadAll() return slice length is: %d", n)
 	if n == 0 {
 		return s.Buffer
 	}
@@ -73,7 +84,7 @@ func compress(r *http.Request) (msg []string, err error, eof bool) {
 		return
 	}
 
-	s := NewDefaultSettings(jsonR.CollectionName, jsonR.FolderPath)
+	s := settings.NewDefaultSettings(jsonR.CollectionName, jsonR.FolderPath)
 
 	_, _, err = launchConversionFromWeb(s, logger)
 
@@ -113,7 +124,7 @@ var webroot string = "website"
 /*
 // Echo the data received on the Web Socket.
 func echoServer(ws *websocket.Conn) {
-	writeInfo("Message received from websocket")
+	WriteInfo("Message received from websocket")
 	io.Copy(ws, ws);
 }
 */
@@ -125,7 +136,7 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 
 	logger = &appendSliceWriter{Buffer: make([]string, 0, 100)}
 
-	writeInfof("Starting up web server on port %d, click or copy this link to open up the page: %s\n", WEBLOG_PORT, hosturl)
+	imageconvert.WriteInfof("Starting up web server on port %d, click or copy this link to open up the page: %s\n", WEBLOG_PORT, hosturl)
 
 	// find and serve the goconvert files
 	//t, _, err := build.FindTree(basePkg)
@@ -138,27 +149,21 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 		for k, v := range webresources {
 			//fp := filepath.Join(root, tmpl)
 			//s, e := os.Stat(fp)
-			if !Debug && strings.HasSuffix(k, "html") {
-				//writeInfo("File", fp, "exists", e == nil && !s.IsDirectory())
-				writeInfo("File", k, "is a template")
-				t := template.Must(template.New(k).Parse(v))
-				//t := template.Must(template.ParseFile(fp))
-				templates[k] = t
-			} else {
-				// write out to let it be served later as a static file
-				fp := filepath.Join(webroot, k)
-				writeInfo("Deploying resource to file system:", fp)
-				err = createFileAndWriteText(fp, v)
-				if err != nil {
-					return
-				}
+
+			// write out to let it be served later as a static file
+			fp := filepath.Join(webroot, k)
+			imageconvert.WriteInfo("Deploying resource to file system:", fp)
+			err = createFileAndWriteText(fp, v)
+			if err != nil {
+				return
 			}
+
 		}
 
-		writeInfo("Serving content from", webroot)
+		imageconvert.WriteInfo("Serving content from", webroot)
 
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			//writeInfo("Handler for / called. URL.Path = " + r.URL.Path)
+			//WriteInfo("Handler for / called. URL.Path = " + r.URL.Path)
 			if r.URL.Path == "/favicon.ico" { //|| r.URL.Path == "/" {
 				fn := filepath.Join(webroot, r.URL.Path[1:])
 				http.ServeFile(w, r, fn)
@@ -172,10 +177,10 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 
 				//fn := filepath.Join(root, r.URL.Path[1:])
 				//http.ServeFile(w, r, fn)
-				_, ok := templates[fkey]
-				if !ok {
+				//_, ok := templates[fkey]
+				if !strings.HasSuffix(fkey, "html") {
 					//fp := filepath.Join(webroot, r.URL.Path[1:])
-					writeInfo("Serving static resource:", fp)
+					imageconvert.WriteInfo("Serving static resource:", fp)
 					http.ServeFile(w, r, fp)
 					return
 				}
@@ -197,7 +202,7 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 		serverAddr := server.Listener.Addr().String()
 		log.Print("Test WebSocket server listening on ", serverAddr)
 
-		writeInfof("Serving at http://%s/\n", serverAddr)
+		imageconvert.WriteInfof("Serving at http://%s/\n", serverAddr)
 		// go http.ListenAndServe(*httpListen, nil)
 		browserCmd, _ = runBrowser(".", serverAddr)
 
@@ -221,14 +226,14 @@ func createFileAndWriteText(fp string, text string) (err error) {
 	/*
 		_, e = os.Stat(fp)
 		if e != nil {
-			writeInfo("Creating file:", fp)
+			WriteInfo("Creating file:", fp)
 			f, err = os.Create(fp)
 		} else {
 			f, err = os.Open(fp)
 		}
 	*/
 
-	writeInfo("Creating file:", fp)
+	imageconvert.WriteInfo("Creating file:", fp)
 	f, err = os.Create(fp)
 
 	if err != nil {
@@ -246,20 +251,26 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 	ok := false
 	var t *template.Template
 
-	if Debug && strings.HasSuffix(tmpl, "html") {
+	t, ok = templates[tmpl]
+
+	if !ok {
 		fp := filepath.Join(webroot, tmpl)
 		s, e := os.Stat(fp)
 		if e == nil && !s.IsDir() {
-			t, e = template.ParseFiles(fp)
-			ok = e == nil
+			t = template.Must(template.New(tmpl).ParseFiles(fp))
+			imageconvert.WriteInfof("Loaded template \"%s\" from file system.\n", fp)
+		} else {
+			http.Error(w, fmt.Sprintf("template %s does not exist", tmpl), http.StatusInternalServerError)
+			return
 		}
-	} else {
-		t, ok = templates[tmpl]
+
+		// cache the template
+		if !settings.Debug {
+			//t := template.Must(template.ParseFile(fp))
+			templates[tmpl] = t
+		}
 	}
-	if !ok {
-		http.Error(w, fmt.Sprintf("template %s does not exist", tmpl), http.StatusInternalServerError)
-		return
-	}
+
 	ctype := "text/html; charset=utf-8"
 	w.Header().Set("Content-Type", ctype)
 	err := t.Execute(w, data)
@@ -298,9 +309,9 @@ func runBrowser(dir string, url string) (cmd *exec.Cmd, err error) {
 	return nil, errors.New("No known browser could be started. Do it manually!")
 }
 
-func launchConversionFromWeb(settings *Settings, logger *appendSliceWriter) (responseChannel chan *response, quitChannel chan bool, err error) {
+func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWriter) (responseChannel chan *imageconvert.Response, quitChannel chan bool, err error) {
 	startNanosecs := time.Now()
-	responseChannel, quitChannel, fileno, collPublishFolder, err := Convert(
+	responseChannel, quitChannel, fileno, collPublishFolder, err := imageconvert.Convert(
 		settings.CollName,
 		settings.SourceDir,
 		settings.PublishDir,
@@ -314,19 +325,19 @@ func launchConversionFromWeb(settings *Settings, logger *appendSliceWriter) (res
 	go func() {
 
 		// collect responses
-		writeInfo(fmt.Sprintf("Collecting results. Number of images: %d", fileno))
+		imageconvert.WriteInfo(fmt.Sprintf("Collecting results. Number of images: %d", fileno))
 
 		for i := 0; i < fileno; i++ {
 
 			r := <-responseChannel
-			fname := filepath.Base(r.imgF.path)
+			fname := filepath.Base(r.ImgF.Path)
 			var msg string
-			if r.error == nil {
+			if r.Error == nil {
 				msg = fmt.Sprintf("Success, file %s resized and archived", fname)
 			} else {
-				msg = fmt.Sprintf("Error, file %s, the error was %s", fname, r.error)
+				msg = fmt.Sprintf("Error, file %s, the error was %s", fname, r.Error)
 			}
-			writeInfo(msg)
+			imageconvert.WriteInfo(msg)
 			io.WriteString(logger, msg)
 		}
 

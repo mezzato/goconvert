@@ -1,4 +1,4 @@
-package main
+package webgui
 
 // GENERATED FILE: Append here all the resources to be exposed as variables
 // webresources["index.html"] = etc...

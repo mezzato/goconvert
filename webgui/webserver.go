@@ -1,4 +1,4 @@
-package main
+package webgui
 
 import (
 	"crypto/rand"

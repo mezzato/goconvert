@@ -1,8 +1,9 @@
-package main
+package imageconvert
 
 import (
 	"bytes"
 	exif4go "code.google.com/p/exif4go"
+	"code.google.com/p/goconvert/settings"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,28 @@ import (
 	"strings"
 	"time"
 )
+
+type request struct {
+	imgF     *imgFile
+	response chan *Response
+}
+
+type Response struct {
+	ImgF  *imgFile
+	Error error
+}
+
+type imgParams struct {
+	cmdArgs          []string
+	subFolderRelPath string
+	prefix           string
+}
+
+type imgFile struct {
+	timestamp string
+	sortkey   string
+	Path      string
+}
 
 func getFileExifInfo(fp string) (timestamp string, sortkey string, err error) {
 	f, err := os.Open(fp)
@@ -48,18 +71,6 @@ func getFileExifInfo(fp string) (timestamp string, sortkey string, err error) {
 	sortkey = t.Format("20060102")
 
 	return
-}
-
-type imgParams struct {
-	cmdArgs          []string
-	subFolderRelPath string
-	prefix           string
-}
-
-type imgFile struct {
-	timestamp string
-	sortkey   string
-	path      string
 }
 
 func newImgFile(fpath string) (i *imgFile, err error) {
@@ -122,10 +133,10 @@ func (f *imgFolder) getImgFiles() (imgFiles []*imgFile, err error) {
 	imgFiles = make([]*imgFile, 0, 50)
 	var files []string
 	if fi.IsDir() {
-		writeInfo("Gettings image files in folder", f.ImgFolder)
+		WriteInfo("Gettings image files in folder", f.ImgFolder)
 		gs := filepath.Join(f.ImgFolder, "*")
 		files, _ = filepath.Glob(gs) // find all files in folder
-		//writeVerbose(fmt.Sprintf("Number of files via glob search %s found in folder: %d", gs,len(files)))
+		//WriteVerbose(fmt.Sprintf("Number of files via glob search %s found in folder: %d", gs,len(files)))
 		sort.Strings(files)
 
 	} else {
@@ -136,9 +147,9 @@ func (f *imgFolder) getImgFiles() (imgFiles []*imgFile, err error) {
 
 	for _, fp := range files {
 		ext := strings.ToLower(filepath.Ext(fp))
-		//writeVerbose(fmt.Sprintf("Number of extensions = %d",len(f.extensions)))
+		//WriteVerbose(fmt.Sprintf("Number of extensions = %d",len(f.extensions)))
 		idx := sort.SearchStrings(f.extensions, ext)
-		writeVerbose("The value of idx in the extension slice is:", idx)
+		WriteVerbose("The value of idx in the extension slice is:", idx)
 		if idx < len(f.extensions) && f.extensions[idx] == ext {
 			var ifile *imgFile
 			ifile, err = newImgFile(fp)
@@ -156,8 +167,8 @@ func Convert(collname string,
 	srcfolder string,
 	publishfolder string,
 	archivesubfoldername string,
-	convSettings *ConversionSettings) (responseChannel chan *response, quitChannel chan bool, fileno int, collPublishFolder string, err error) {
-	writeInfo("Starting the image conversion")
+	convSettings *settings.ConversionSettings) (responseChannel chan *Response, quitChannel chan bool, fileno int, collPublishFolder string, err error) {
+	WriteInfo("Starting the image conversion")
 
 	var imgFolder *imgFolder
 
@@ -180,7 +191,7 @@ func Convert(collname string,
 	// check imgmagick
 	cmd := []string{"convert", "-version"}
 	c := &Cmd{Args: cmd}
-	writeVerbose("Testing ImageMagick installation")
+	WriteVerbose("Testing ImageMagick installation")
 	err = c.Run()
 	if err != nil {
 		err = fmt.Errorf("Error running ImageMagick, check that it is correctly installed. Error: %s", err.Error())
@@ -201,8 +212,8 @@ func Convert(collname string,
 	}
 
 	convSets := []*imgParams{smallPars, thumbnailPars}
-	writeInfo("Processing images and saving to folder:", publishfolder)
-	writeVerbose("Number of conversion sets:", len(convSets))
+	WriteInfo("Processing images and saving to folder:", publishfolder)
+	WriteVerbose("Number of conversion sets:", len(convSets))
 
 	res := createResizeHandler(imgFolder.collectionPublishFolder, convSets)
 	arch := createArchiveHandler(imgFolder.collectionArchiveFolder, convSettings.MoveOriginal)
@@ -211,14 +222,14 @@ func Convert(collname string,
 
 	//resps := make(map[*imgFile]*request)
 
-	respChannel := make(chan *response, len(imgFolder.imgFiles)) // put a buffer not to lock the feedback calls
+	respChannel := make(chan *Response, len(imgFolder.imgFiles)) // put a buffer not to lock the feedback calls
 
-	writeVerbose(fmt.Sprintf("Number of images in folder: %d", len(imgFolder.imgFiles)))
+	WriteVerbose(fmt.Sprintf("Number of images in folder: %d", len(imgFolder.imgFiles)))
 
 	// start feeding asynchronously
 	go func() {
 		for _, imgf := range imgFolder.imgFiles {
-			writeVerbose(fmt.Sprintf("Processing image file at: %s, date timestamp %s, sortkey %s", imgf.path, imgf.timestamp, imgf.sortkey))
+			WriteVerbose(fmt.Sprintf("Processing image file at: %s, date timestamp %s, sortkey %s", imgf.Path, imgf.timestamp, imgf.sortkey))
 
 			req := &request{imgf, respChannel}
 			reqs <- req
@@ -234,7 +245,7 @@ func startWorkers(h filehandler, noOfWorkers int) (reqs chan *request, quit chan
 	quit = make(chan bool)
 	sem := make(chan int, noOfWorkers)
 
-	writeVerbose(fmt.Sprintf("Starting %d workers and waiting for requests", noOfWorkers))
+	WriteVerbose(fmt.Sprintf("Starting %d workers and waiting for requests", noOfWorkers))
 	go func() {
 		for {
 			select {
@@ -244,27 +255,17 @@ func startWorkers(h filehandler, noOfWorkers int) (reqs chan *request, quit chan
 					sem <- 1 // Wait for active queue to drain.
 					// feed the response channel
 					e := h(req.imgF)
-					req.response <- &response{req.imgF, e}
+					req.response <- &Response{req.imgF, e}
 					<-sem // Done; enable next request to run.
 				}()
 			case <-quit:
-				writeVerbose("Stopping workers")
+				WriteVerbose("Stopping workers")
 				return // get out
 			}
 		}
 	}()
 
 	return
-}
-
-type request struct {
-	imgF     *imgFile
-	response chan *response
-}
-
-type response struct {
-	imgF  *imgFile
-	error error
 }
 
 type filehandler func(f *imgFile) (err error)
@@ -285,19 +286,19 @@ func createCompositeHandler(handlerChain []filehandler) (handler filehandler) {
 func createResizeHandler(collPublishFolder string, convSets []*imgParams) (handler filehandler) {
 	var resizeHandler = func(img *imgFile) (err error) {
 
-		writeVerbose(fmt.Sprintf("Resizing img: %s.", filepath.Base(img.path)))
+		WriteVerbose(fmt.Sprintf("Resizing img: %s.", filepath.Base(img.Path)))
 
 		for _, set := range convSets {
 			if len(set.cmdArgs) == 0 {
 				return errors.New("Command arguments must be specified")
 			}
 
-			newImgName := set.prefix + filepath.Base(img.path)
+			newImgName := set.prefix + filepath.Base(img.Path)
 			subFolderPath := filepath.Join(collPublishFolder, set.subFolderRelPath)
 			var fi os.FileInfo
 			if fi, err = os.Stat(subFolderPath); err != nil || !fi.IsDir() {
 				// create dirs
-				writeVerbose("Creating folder:", subFolderPath)
+				WriteVerbose("Creating folder:", subFolderPath)
 				if err = os.MkdirAll(subFolderPath, 0777); err != nil {
 					return err
 				}
@@ -305,12 +306,12 @@ func createResizeHandler(collPublishFolder string, convSets []*imgParams) (handl
 
 			newImgPath := filepath.Join(subFolderPath, newImgName)
 
-			fullCmd := []string{"convert", img.path}
+			fullCmd := []string{"convert", img.Path}
 			fullCmd = append(fullCmd, set.cmdArgs...)
 			fullCmd = append(fullCmd, newImgPath)
 
 			c := &Cmd{Args: fullCmd}
-			writeVerbose("Running cmd:", c)
+			WriteVerbose("Running cmd:", c)
 			err = c.Run()
 			if err != nil {
 				return
@@ -328,20 +329,20 @@ func createArchiveHandler(collArchiveFolder string, moveOriginal bool) (handler 
 		var fi os.FileInfo
 		if fi, err = os.Stat(collArchiveFolder); err != nil || !fi.IsDir() {
 			// create dirs
-			writeVerbose("Creating folder:", collArchiveFolder)
+			WriteVerbose("Creating folder:", collArchiveFolder)
 			if err = os.MkdirAll(collArchiveFolder, 0777); err != nil {
 				return err
 			}
 		}
-		movePath := filepath.Join(collArchiveFolder, filepath.Base(img.path))
+		movePath := filepath.Join(collArchiveFolder, filepath.Base(img.Path))
 
 		if moveOriginal {
-			writeVerbose("Archiving original file to:", movePath)
-			os.Rename(img.path, movePath)
+			WriteVerbose("Archiving original file to:", movePath)
+			os.Rename(img.Path, movePath)
 		} else {
-			writeVerbose("Copying original file to:", movePath)
+			WriteVerbose("Copying original file to:", movePath)
 			// take a copy			
-			f, _ := os.Open(img.path)
+			f, _ := os.Open(img.Path)
 			defer f.Close()
 			f1, _ := os.Create(movePath)
 			defer f1.Close()

@@ -1,4 +1,4 @@
-package main
+package settings
 
 import (
 	conf "code.google.com/p/goconf"
@@ -31,6 +31,9 @@ const OPTION_CONVERT_MOVEORIGINAL = "moveoriginal"
 
 const OPTION_FTP_ADDRESS = "address"
 const OPTION_FTP_USERNAME = "username"
+
+var argv0 = os.Args[0]
+var Debug = false
 
 type missingSettingsFile string
 
@@ -269,7 +272,7 @@ func AskForSettings(collName string, srcfolder string) (s *Settings, err error) 
 	var c *conf.ConfigFile
 	d, _ := filepath.Split(argv0)
 	fn := filepath.Join(d, SETTINGS_FILE_NAME)
-	writeInfo("Config file path:", fn)
+	fmt.Printf("Config file path:%s\n", fn)
 
 	if _, err = os.Stat(fn); err != nil {
 		newSettingsFile = true
@@ -307,7 +310,7 @@ func AskForSettings(collName string, srcfolder string) (s *Settings, err error) 
 		s = newSettings()
 	}
 
-	writeVerbose("Use file is:", useFile)
+	fmt.Printf("Use file is:%s\n", useFile)
 	qs := s.GetConfigQuestions(useFile)
 
 	ftpkeys := []string{"address", "password", "username"} // sorted!
@@ -334,7 +337,7 @@ func AskForSettings(collName string, srcfolder string) (s *Settings, err error) 
 	}
 
 	if s.SaveConfig {
-		writeInfo("Saving configuration file")
+		fmt.Printf("Saving configuration file\n")
 		err = SaveSettingsToFile(s)
 		if err != nil {
 			log.Fatalf("A fatal error has occurred: %s", err)
