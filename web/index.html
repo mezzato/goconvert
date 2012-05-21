@@ -101,7 +101,7 @@
 						if (!data) {
 							return;
 						}
-						if (data.compile_errors && len(data.compile_errors)>0) {
+						if (data.compile_errors && data.compile_errors.length>0) {
 							//setOutput(data.compile_errors, true);
 							highlightErrors(data.compile_errors);
 							return;

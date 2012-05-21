@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -271,7 +272,19 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 // run is a simple wrapper for exec.Run/Close
 func runBrowser(dir string, url string) (cmd *exec.Cmd, err error) {
 
-	browsers := []string{"google-chrome", "chrome", "firefox", "iexplore"}
+	browsers := []string{"google-chrome", "firefox"}
+
+	switch runtime.GOOS {
+	case "windows":
+		browsers = []string{
+			os.ExpandEnv("${LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe"),
+			os.ExpandEnv("${PROGRAMFILES}\\Mozilla Firefox\\firefox"),
+			os.ExpandEnv("${PROGRAMFILES}\\Internet Explorer\\iexplore"),
+		}
+	default:
+		//
+	}
+
 	for _, b := range browsers {
 		cmd = exec.Command(b, url)
 		cmd.Dir = dir
@@ -282,7 +295,7 @@ func runBrowser(dir string, url string) (cmd *exec.Cmd, err error) {
 			return
 		}
 	}
-	return nil, errors.New("No browser could be started. Do it manually!")
+	return nil, errors.New("No known browser could be started. Do it manually!")
 }
 
 func launchConversionFromWeb(settings *Settings, logger *appendSliceWriter) (responseChannel chan *response, quitChannel chan bool, err error) {

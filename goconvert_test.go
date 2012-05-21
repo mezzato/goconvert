@@ -4,6 +4,7 @@
 
 package main
 
+/*
 import (
 	//"bufio"
 	"bytes"
@@ -67,3 +68,4 @@ func TestEcho(t *testing.T) {
 	}
 
 }
+*/
