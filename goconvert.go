@@ -112,7 +112,7 @@ Have fun!
 		} else {
 			if browserCmd != nil {
 				imageconvert.WriteInfo("Close the browser to shut down the process when you are finished.")
-				_, err = browserCmd.Process.Wait()
+				err = browserCmd.Wait()
 				<-server.Quit
 			} else {
 				imageconvert.WriteInfo("Open a browser manually and go the link specified. Press then Ctrl+C to shut down the process.")
