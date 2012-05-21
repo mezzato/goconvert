@@ -4,146 +4,48 @@ package webgui
 // webresources["index.html"] = etc...
 // webresources["css/style.css"] = etc...
 
-func setVariables() {webresources["index.html"] = `
-<!doctype html>
+func setVariables() {webresources["test.html"] = `<!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>goconvert web</title>
+	<meta charset="utf-8"/>
+	<title>Simple Web Socket Client</title>
+	<link rel="stylesheet" type="text/css" href="css/reset.css"/>
+	<link rel="stylesheet" type="text/css" href="css/style.css"/>
 </head>
 <body>
-	<h1>Viewing index</h1>
-
-	<div>Testing page, port {{.WebPort |html}}</div>
-
-	<h1>Image conversion and upload tool</h1>
-	<section id="imagefolder">
-		<label for="folder">Image folder</label> <input id="folder"
-			name="folder" type="text" value="." />
-	</section>
-	<section id="collectionname">
-		<label for="collection">Collection name</label> <input id="collection"
-			name="collection" type="text" value="" />
-		<p>
-			<input type="button" id="compress" value="compress images" />
-		</p>
-	</section>
-	<section id="logsection">
-		<span>Output log</span>
-		<div id="log">
-		
+<div id="content">
+	<fieldset>
+		<legend>Server Location</legend>
+		<div>
+			<label>URL:</label>
+			<input type="text" id="serverUrl" value="ws://"/>
+			<button id="connectButton">Open</button>
+			<button id="disconnectButton">Close</button>
 		</div>
-	</section>
-	<section id="errorsection">
-		<span>Error log</span>
-		<div id="errors" style="color:maroon;font-weight: bold;">
-		
+		<div>
+			<label>Status:</label>
+			<span id="connectionStatus">CLOSED</span>
 		</div>
-	</section>
-	<!-- 
-<script src="http://www.google.com/jsapi"></script>
-<script>google.load("jquery", "1.3")</script>
-<script src="http://jquery-json.googlecode.com/files/jquery.json-2.2.min.js"></script>
-<script src="http://jquery-websocket.googlecode.com/files/jquery.websocket-0.0.1.js"></script>
- -->
-	<script type="text/javascript" src="scripts/jquery-1.7.js"></script>
-	<script>
-	
-		$(function(){
-			var pollHandler = function(op, poll_interval_msec, timeout_msec){
-				t = 0;
-				var doPoll = function(){
-				    $.ajax('/' + op +'/status', {
-							data: null,
-							type: "POST",
-							dataType: "json",
-							beforeSend: function(x) {
-					            if (x && x.overrideMimeType) {
-					              x.overrideMimeType("application/j-son;charset=UTF-8");
-					            }
-					        },
-							success: function(data) {
-						        //alert(data);  // process results here
-						        if (!data.eof && t < timeout_msec) {
-						        	writeLog(data.messages);
-						        	t += poll_interval_msec;
-						        	setTimeout(doPoll,poll_interval_msec);
-						        } else if (data.eof) {
-						        	writeLog(data.messages);
-						        	alert('finished');
-						        } else {
-									alert('timed out');					        	
-						        }
-							},
-							error: function() {
-								alert('error');
-							}
-						});
-					};
-					
-				return doPoll;
-			};
-		
-		/*
-			 var ws = $.websocket("ws://127.0.0.1:{{.WebPort |html}}/echo", {
-			 events: {
-			 message: function(e) { $('#content').append(e.data + '<br>') }
-			 }
-			 });
-			 */
-			
-			$('#compress').click(function() {
-				var data = {folder: $("#folder").val(), collection: $("#collection").val()};	
-				$.ajax("/compress", {
-					data:  JSON.stringify(data),
-					type: "POST",
-					dataType: "json",
-					beforeSend: function(x) {
-			            if (x && x.overrideMimeType) {
-			              x.overrideMimeType("application/j-son;charset=UTF-8");
-			            }
-			        },
-					success: function(data) {
-						if (!data) {
-							return;
-						}
-						if (data.compile_errors && data.compile_errors.length>0) {
-							//setOutput(data.compile_errors, true);
-							highlightErrors(data.compile_errors);
-							return;
-						}
-						pollfunc = pollHandler("compress", 1000, 10000);
-						writeLog(data.messages);
-						pollfunc();
-					},
-					error: function() {
-						alert('error');
-					}
-				});
-			});
-			
-			var logdiv = $('#log');
-			var errordiv = $('#errors');
-			var writeLog = function(messages){
-				var i;
-				if(!messages){return;}
-				for(i = 0;i< messages.length;i++){
-					logdiv.append('<p>' + messages[i] + '</p>');
-				}
-			}
-			var highlightErrors = function(errors){
-				var i;
-				if(!errors){return;}
-				for(i = 0;i<errors.length;i++){
-					errordiv.append('<p>' + errors[i] + '</p>');
-				}
-			}
-		});
-	</script>
+	</fieldset>
+	<fieldset id="requestArea">
+		<legend>Request</legend>
+		<div>
+			<textarea id="sendMessage" disabled="disabled"></textarea>
+		</div>
+		<div>
+			<button id="sendButton" disabled="disabled">Send</button>
+			[Shortcut] Ctr + Enter
+		</div>
+	</fieldset>
+	<fieldset id="messageArea">
+		<legend>Message Log <button id="clearMessage">Clear</button></legend>
+		<div id="messages"></div>
+	</fieldset>
+</div>
+<script type="text/javascript" src="scripts/jquery-1.7.js"></script>
+<script type="text/javascript" src="scripts/index.js"></script>
 </body>
-</html>
-
-`
+</html>`
 webresources["index.js"] = `new function() {
 	var ws = null;
 	var connected = false;
@@ -272,48 +174,150 @@ webresources["index.js"] = `new function() {
 $(function() {
 	WebSocketClient.init();
 });`
-webresources["test.html"] = `<!DOCTYPE html>
+webresources["index.html"] = `
+<!doctype html>
 <html>
 <head>
-	<meta charset="utf-8"/>
-	<title>Simple Web Socket Client</title>
-	<link rel="stylesheet" type="text/css" href="css/reset.css"/>
-	<link rel="stylesheet" type="text/css" href="css/style.css"/>
+<meta charset="UTF-8">
+<title>goconvert web</title>
 </head>
 <body>
-<div id="content">
-	<fieldset>
-		<legend>Server Location</legend>
-		<div>
-			<label>URL:</label>
-			<input type="text" id="serverUrl" value="ws://"/>
-			<button id="connectButton">Open</button>
-			<button id="disconnectButton">Close</button>
+	<h1>Viewing index</h1>
+
+	<div>Testing page, port {{.WebPort |html}}</div>
+
+	<h1>Image conversion and upload tool</h1>
+	<section id="imagefolder">
+		<label for="folder">Image folder</label> <input id="folder"
+			name="folder" type="text" value="{{.HomeImageFolder |html}}" />
+	</section>
+	<section id="collectionname">
+		<label for="collection">Collection name</label> <input id="collection"
+			name="collection" type="text" value="" />
+		<p>
+			<input type="button" id="compress" value="compress images" />
+		</p>
+	</section>
+	<section id="logsection">
+		<span>Output log</span>
+		<div id="log">
+		
 		</div>
-		<div>
-			<label>Status:</label>
-			<span id="connectionStatus">CLOSED</span>
+	</section>
+	<section id="errorsection">
+		<span>Error log</span>
+		<div id="errors" style="color:maroon;font-weight: bold;">
+		
 		</div>
-	</fieldset>
-	<fieldset id="requestArea">
-		<legend>Request</legend>
-		<div>
-			<textarea id="sendMessage" disabled="disabled"></textarea>
-		</div>
-		<div>
-			<button id="sendButton" disabled="disabled">Send</button>
-			[Shortcut] Ctr + Enter
-		</div>
-	</fieldset>
-	<fieldset id="messageArea">
-		<legend>Message Log <button id="clearMessage">Clear</button></legend>
-		<div id="messages"></div>
-	</fieldset>
-</div>
-<script type="text/javascript" src="scripts/jquery-1.7.js"></script>
-<script type="text/javascript" src="scripts/index.js"></script>
+	</section>
+	<!-- 
+<script src="http://www.google.com/jsapi"></script>
+<script>google.load("jquery", "1.3")</script>
+<script src="http://jquery-json.googlecode.com/files/jquery.json-2.2.min.js"></script>
+<script src="http://jquery-websocket.googlecode.com/files/jquery.websocket-0.0.1.js"></script>
+ -->
+	<script type="text/javascript" src="scripts/jquery-1.7.js"></script>
+	<script>
+	
+		$(function(){
+			var pollHandler = function(op, poll_interval_msec, timeout_msec){
+				t = 0;
+				var doPoll = function(){
+				    $.ajax('/' + op +'/status', {
+							data: null,
+							type: "POST",
+							dataType: "json",
+							beforeSend: function(x) {
+					            if (x && x.overrideMimeType) {
+					              x.overrideMimeType("application/j-son;charset=UTF-8");
+					            }
+					        },
+							success: function(data) {
+						        //alert(data);  // process results here
+						        if (!data.eof && t < timeout_msec) {
+						        	writeLog(data.messages);
+						        	t += poll_interval_msec;
+						        	setTimeout(doPoll,poll_interval_msec);
+						        } else if (data.eof) {
+						        	writeLog(data.messages);
+						        	writeLog('finished');
+						        } else {
+						        	writeLog('timed out');					        	
+						        }
+							},
+							error: function() {
+								alert('error');
+							}
+						});
+					};
+					
+				return doPoll;
+			};
+		
+		/*
+			 var ws = $.websocket("ws://127.0.0.1:{{.WebPort |html}}/echo", {
+			 events: {
+			 message: function(e) { $('#content').append(e.data + '<br>') }
+			 }
+			 });
+			 */
+			
+			$('#compress').click(function() {
+				var data = {folder: $("#folder").val(), collection: $("#collection").val()};	
+				$.ajax("/compress", {
+					data:  JSON.stringify(data),
+					type: "POST",
+					dataType: "json",
+					beforeSend: function(x) {
+			            if (x && x.overrideMimeType) {
+			              x.overrideMimeType("application/j-son;charset=UTF-8");
+			            }
+			        },
+					success: function(data) {
+						if (!data) {
+							return;
+						}
+						if (data.compile_errors && data.compile_errors.length>0) {
+							//setOutput(data.compile_errors, true);
+							highlightErrors(data.compile_errors);
+							return;
+						}
+						pollfunc = pollHandler("compress", 1000, 10000);
+						writeLog(data.messages);
+						pollfunc();
+					},
+					error: function() {
+						alert('error');
+					}
+				});
+			});
+			
+			var logdiv = $('#log');
+			var errordiv = $('#errors');
+			var writeLog = function(messages){
+				addLinesToDiv(messages, logdiv);
+			};
+			var highlightErrors = function(errors){
+				addLinesToDiv(errors, errordiv);
+			};
+			
+			var addLinesToDiv = function(lines, div){
+				var i;
+				if (typeof lines === 'string'){
+					lines = [lines];					
+				}
+				if(!lines){return;}
+				for(i = 0;i< lines.length;i++){
+					div.append('<p>' + lines[i] + '</p>');
+				}
+				
+			};
+		});
+	</script>
 </body>
-</html>`
+</html>
+
+`
 webresources["css/reset.css"] = `/* 
 html5doctor.com Reset Stylesheet
 v1.4.1 
@@ -486,134 +490,6 @@ label {
 #messages pre.sent {
 	color: #f63;
 }`
-webresources["scripts/index.js"] = `new function() {
-	var ws = null;
-	var connected = false;
-
-	var serverUrl;
-	var connectionStatus;
-	var sendMessage;
-	
-	var connectButton;
-	var disconnectButton; 
-	var sendButton;
-
-	var open = function() {
-		var url = serverUrl.val();
-		ws = new WebSocket(url);
-		ws.onopen = onOpen;
-		ws.onclose = onClose;
-		ws.onmessage = onMessage;
-		ws.onerror = onError;
-
-		connectionStatus.text('OPENING ...');
-		serverUrl.attr('disabled', 'disabled');
-		connectButton.hide();
-		disconnectButton.show();
-	}
-	
-	var close = function() {
-		if (ws) {
-			console.log('CLOSING ...');
-			ws.close();
-		}
-		connected = false;
-		connectionStatus.text('CLOSED');
-
-		serverUrl.removeAttr('disabled');
-		connectButton.show();
-		disconnectButton.hide();
-		sendMessage.attr('disabled', 'disabled');
-		sendButton.attr('disabled', 'disabled');
-	}
-	
-	var clearLog = function() {
-		$('#messages').html('');
-	}
-	
-	var onOpen = function() {
-		console.log('OPENED: ' + serverUrl.val());
-		connected = true;
-		connectionStatus.text('OPENED');
-		sendMessage.removeAttr('disabled');
-		sendButton.removeAttr('disabled');
-	};
-	
-	var onClose = function() {
-		console.log('CLOSED: ' + serverUrl.val());
-		ws = null;
-	};
-	
-	var onMessage = function(event) {
-		var data = event.data;
-		addMessage(data);
-	};
-	
-	var onError = function(event) {
-		alert(event.data);
-	}
-	
-	var addMessage = function(data, type) {
-		var msg = $('<pre>').text(data);
-		if (type === 'SENT') {
-			msg.addClass('sent');
-		}
-		var messages = $('#messages');
-		messages.append(msg);
-		
-		var msgBox = messages.get(0);
-		while (msgBox.childNodes.length > 1000) {
-			msgBox.removeChild(msgBox.firstChild);
-		}
-		msgBox.scrollTop = msgBox.scrollHeight;
-	}
-
-	WebSocketClient = {
-		init: function() {
-			serverUrl = $('#serverUrl');
-			connectionStatus = $('#connectionStatus');
-			sendMessage = $('#sendMessage');
-			
-			connectButton = $('#connectButton');
-			disconnectButton = $('#disconnectButton'); 
-			sendButton = $('#sendButton');
-			
-			connectButton.click(function(e) {
-				close();
-				open();
-			});
-		
-			disconnectButton.click(function(e) {
-				close();
-			});
-			
-			sendButton.click(function(e) {
-				var msg = $('#sendMessage').val();
-				addMessage(msg, 'SENT');
-				ws.send(msg);
-			});
-			
-			$('#clearMessage').click(function(e) {
-				clearLog();
-			});
-			
-			var isCtrl;
-			sendMessage.keyup(function (e) {
-				if(e.which == 17) isCtrl=false;
-			}).keydown(function (e) {
-				if(e.which == 17) isCtrl=true;
-				if(e.which == 13 && isCtrl == true) {
-					sendButton.click();
-					return false;
-				}
-			});
-		}
-	};
-}
-
-$(function() {
-	WebSocketClient.init();
-});`
 webresources["scripts/jquery-1.7.js"] = `/*!
  * jQuery JavaScript Library v1.7
  * http://jquery.com/
@@ -9915,5 +9791,133 @@ jQuery.each([ "Height", "Width" ], function( i, name ) {
 window.jQuery = window.$ = jQuery;
 })( window );
 `
+webresources["scripts/index.js"] = `new function() {
+	var ws = null;
+	var connected = false;
+
+	var serverUrl;
+	var connectionStatus;
+	var sendMessage;
+	
+	var connectButton;
+	var disconnectButton; 
+	var sendButton;
+
+	var open = function() {
+		var url = serverUrl.val();
+		ws = new WebSocket(url);
+		ws.onopen = onOpen;
+		ws.onclose = onClose;
+		ws.onmessage = onMessage;
+		ws.onerror = onError;
+
+		connectionStatus.text('OPENING ...');
+		serverUrl.attr('disabled', 'disabled');
+		connectButton.hide();
+		disconnectButton.show();
+	}
+	
+	var close = function() {
+		if (ws) {
+			console.log('CLOSING ...');
+			ws.close();
+		}
+		connected = false;
+		connectionStatus.text('CLOSED');
+
+		serverUrl.removeAttr('disabled');
+		connectButton.show();
+		disconnectButton.hide();
+		sendMessage.attr('disabled', 'disabled');
+		sendButton.attr('disabled', 'disabled');
+	}
+	
+	var clearLog = function() {
+		$('#messages').html('');
+	}
+	
+	var onOpen = function() {
+		console.log('OPENED: ' + serverUrl.val());
+		connected = true;
+		connectionStatus.text('OPENED');
+		sendMessage.removeAttr('disabled');
+		sendButton.removeAttr('disabled');
+	};
+	
+	var onClose = function() {
+		console.log('CLOSED: ' + serverUrl.val());
+		ws = null;
+	};
+	
+	var onMessage = function(event) {
+		var data = event.data;
+		addMessage(data);
+	};
+	
+	var onError = function(event) {
+		alert(event.data);
+	}
+	
+	var addMessage = function(data, type) {
+		var msg = $('<pre>').text(data);
+		if (type === 'SENT') {
+			msg.addClass('sent');
+		}
+		var messages = $('#messages');
+		messages.append(msg);
+		
+		var msgBox = messages.get(0);
+		while (msgBox.childNodes.length > 1000) {
+			msgBox.removeChild(msgBox.firstChild);
+		}
+		msgBox.scrollTop = msgBox.scrollHeight;
+	}
+
+	WebSocketClient = {
+		init: function() {
+			serverUrl = $('#serverUrl');
+			connectionStatus = $('#connectionStatus');
+			sendMessage = $('#sendMessage');
+			
+			connectButton = $('#connectButton');
+			disconnectButton = $('#disconnectButton'); 
+			sendButton = $('#sendButton');
+			
+			connectButton.click(function(e) {
+				close();
+				open();
+			});
+		
+			disconnectButton.click(function(e) {
+				close();
+			});
+			
+			sendButton.click(function(e) {
+				var msg = $('#sendMessage').val();
+				addMessage(msg, 'SENT');
+				ws.send(msg);
+			});
+			
+			$('#clearMessage').click(function(e) {
+				clearLog();
+			});
+			
+			var isCtrl;
+			sendMessage.keyup(function (e) {
+				if(e.which == 17) isCtrl=false;
+			}).keydown(function (e) {
+				if(e.which == 17) isCtrl=true;
+				if(e.which == 13 && isCtrl == true) {
+					sendButton.click();
+					return false;
+				}
+			});
+		}
+	};
+}
+
+$(function() {
+	WebSocketClient.init();
+});`
 
 return }

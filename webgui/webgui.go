@@ -5,7 +5,7 @@ import (
 	"os"
 	//"go/build"
 	"code.google.com/p/goconvert/imageconvert"
-	"code.google.com/p/goconvert/settings"
+	settings "code.google.com/p/goconvert/settings"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -21,13 +21,10 @@ import (
 )
 
 type Page struct {
-	Title   string
-	WebPort int
+	Title           string
+	WebPort         int
+	HomeImageFolder string
 }
-
-var (
-	templates = make(map[string]*template.Template)
-)
 
 type appendSliceWriter struct {
 	Buffer []string
@@ -66,7 +63,12 @@ type JsonRequest struct {
 
 type requestProcessor func(r *http.Request) (msgs []string, err error, eof bool)
 
-var logger *appendSliceWriter
+var (
+	templates       = make(map[string]*template.Template)
+	logger          *appendSliceWriter
+	homeImgDir                         = filepath.Join(settings.GetHomeDir(), "Pictures", "ToResize")
+	defaultSettings *settings.Settings = settings.NewDefaultSettings("", homeImgDir)
+)
 
 func compress(r *http.Request) (msg []string, err error, eof bool) {
 	var reader io.Reader = r.Body
@@ -84,8 +86,9 @@ func compress(r *http.Request) (msg []string, err error, eof bool) {
 		return
 	}
 
-	s := settings.NewDefaultSettings(jsonR.CollectionName, jsonR.FolderPath)
-
+	s := defaultSettings
+	s.CollName = jsonR.CollectionName
+	s.SourceDir = jsonR.FolderPath
 	_, _, err = launchConversionFromWeb(s, logger)
 
 	return []string{fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonR.FolderPath, jsonR.CollectionName)}, err, err != nil
@@ -184,7 +187,7 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 					http.ServeFile(w, r, fp)
 					return
 				}
-				p := &Page{WebPort: WEBLOG_PORT}
+				p := &Page{WebPort: WEBLOG_PORT, HomeImageFolder: defaultSettings.SourceDir}
 				renderTemplate(w, fkey, p)
 				return
 			}

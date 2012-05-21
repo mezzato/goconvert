@@ -13,7 +13,7 @@
 	<h1>Image conversion and upload tool</h1>
 	<section id="imagefolder">
 		<label for="folder">Image folder</label> <input id="folder"
-			name="folder" type="text" value="." />
+			name="folder" type="text" value="{{.HomeImageFolder |html}}" />
 	</section>
 	<section id="collectionname">
 		<label for="collection">Collection name</label> <input id="collection"
@@ -64,9 +64,9 @@
 						        	setTimeout(doPoll,poll_interval_msec);
 						        } else if (data.eof) {
 						        	writeLog(data.messages);
-						        	alert('finished');
+						        	writeLog('finished');
 						        } else {
-									alert('timed out');					        	
+						        	writeLog('timed out');					        	
 						        }
 							},
 							error: function() {
@@ -119,19 +119,23 @@
 			var logdiv = $('#log');
 			var errordiv = $('#errors');
 			var writeLog = function(messages){
-				var i;
-				if(!messages){return;}
-				for(i = 0;i< messages.length;i++){
-					logdiv.append('<p>' + messages[i] + '</p>');
-				}
-			}
+				addLinesToDiv(messages, logdiv);
+			};
 			var highlightErrors = function(errors){
+				addLinesToDiv(errors, errordiv);
+			};
+			
+			var addLinesToDiv = function(lines, div){
 				var i;
-				if(!errors){return;}
-				for(i = 0;i<errors.length;i++){
-					errordiv.append('<p>' + errors[i] + '</p>');
+				if (typeof lines === 'string'){
+					lines = [lines];					
 				}
-			}
+				if(!lines){return;}
+				for(i = 0;i< lines.length;i++){
+					div.append('<p>' + lines[i] + '</p>');
+				}
+				
+			};
 		});
 	</script>
 </body>
