@@ -13,7 +13,7 @@
 	<h1>Image conversion and upload tool</h1>
 	<section id="imagefolder">
 		<label for="folder">Image folder</label> <input id="folder"
-			name="folder" type="text" value="{{.HomeImageFolder |html}}" />
+			name="folder" type="text" value="" />
 	</section>
 	<section id="collectionname">
 		<label for="collection">Collection name</label> <input id="collection"
@@ -44,6 +44,10 @@
 	<script>
 	
 		$(function(){
+			
+			var settings =  JSON.parse('{{.SettingsAsJson}}');
+			$('#folder').val(settings && settings.homeDir);
+			
 			var pollHandler = function(op, poll_interval_msec, timeout_msec){
 				t = 0;
 				var doPoll = function(){
@@ -87,9 +91,12 @@
 			 */
 			
 			$('#compress').click(function() {
-				var data = {folder: $("#folder").val(), collection: $("#collection").val()};	
+				
+				settings.sourceDir = $("#folder").val(); 
+				settings.collName = $("#collection").val();
+					
 				$.ajax("/compress", {
-					data:  JSON.stringify(data),
+					data:  JSON.stringify(settings),
 					type: "POST",
 					dataType: "json",
 					beforeSend: function(x) {

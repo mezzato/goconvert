@@ -23,7 +23,7 @@ import (
 type Page struct {
 	Title           string
 	WebPort         int
-	HomeImageFolder string
+	SettingsAsJson	string
 }
 
 type appendSliceWriter struct {
@@ -56,11 +56,6 @@ type Response struct {
 	Eof      bool     `json:"eof"`
 }
 
-type JsonRequest struct {
-	FolderPath     string `json:"folder"`
-	CollectionName string `json:"collection"`
-}
-
 type requestProcessor func(r *http.Request) (msgs []string, err error, eof bool)
 
 var (
@@ -77,21 +72,17 @@ func compress(r *http.Request) (msg []string, err error, eof bool) {
 		eof = true
 		return
 	}
-	var jsonR JsonRequest
+	var jsonSettings *settings.Settings
 	fmt.Println("request body: " + string(b))
-	err = json.Unmarshal(b, &jsonR)
+	err = json.Unmarshal(b, &jsonSettings)
 	if err != nil {
 		fmt.Println(err)
 		eof = true
 		return
 	}
+	_, _, err = launchConversionFromWeb(jsonSettings, logger)
 
-	s := defaultSettings
-	s.CollName = jsonR.CollectionName
-	s.SourceDir = jsonR.FolderPath
-	_, _, err = launchConversionFromWeb(s, logger)
-
-	return []string{fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonR.FolderPath, jsonR.CollectionName)}, err, err != nil
+	return []string{fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonSettings.SourceDir, jsonSettings.CollName)}, err, err != nil
 }
 
 func compressStatus(r *http.Request) (msgs []string, err error, eof bool) {
@@ -187,7 +178,13 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 					http.ServeFile(w, r, fp)
 					return
 				}
-				p := &Page{WebPort: WEBLOG_PORT, HomeImageFolder: defaultSettings.SourceDir}
+				
+				settingsAsJson, err := json.Marshal(defaultSettings)
+				if err != nil {
+					return
+				}
+				
+				p := &Page{WebPort: WEBLOG_PORT, SettingsAsJson: string(settingsAsJson)}
 				renderTemplate(w, fkey, p)
 				return
 			}

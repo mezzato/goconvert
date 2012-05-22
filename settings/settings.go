@@ -40,16 +40,16 @@ type missingSettingsFile string
 func (s missingSettingsFile) String() string { return string(s) }
 
 type ConversionSettings struct {
-	Width                int
-	Height               int
-	MoveOriginal         bool
-	NoSimultaneousResize int
+	Width                int	`json:"width"`
+	Height               int	`json:"height"`
+	MoveOriginal         bool	`json:"moveOriginal"`
+	NoSimultaneousResize int	`json:"noSimultaneousResize"`
 }
 
 type FtpSettings struct {
-	Address  string
-	Username string
-	Password string
+	Address  string	`json:"address"`
+	Username string	`json:"username"`
+	Password string	`json:"password"`
 }
 
 func (sets *ConversionSettings) AreaInPixed() int {
@@ -58,15 +58,15 @@ func (sets *ConversionSettings) AreaInPixed() int {
 
 // settings
 type Settings struct {
-	SaveConfig               bool
-	CollName                 string
-	SourceDir                string
-	PublishDir               string
-	HomeDir                  string
-	PiwigoGalleryDir         string
-	PiwigoGalleryHighDirName string
-	ConversionSettings       *ConversionSettings
-	FtpSettings              *FtpSettings
+	SaveConfig               bool 	`json:"saveConfig"`
+	CollName                 string `json:"collName"`
+	SourceDir                string	`json:"sourceDir"`
+	PublishDir               string `json:"publishDir"`
+	HomeDir                  string	`json:"homeDir"`
+	PiwigoGalleryDir         string	`json:"piwigoGalleryDir"`
+	PiwigoGalleryHighDirName string	`json:"piwigoGalleryHighDirName"`
+	ConversionSettings       *ConversionSettings	`json:"conversionSettings"`
+	FtpSettings              *FtpSettings			`json:"ftpSettings"`
 }
 
 func newSettings() *Settings {
