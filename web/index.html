@@ -113,7 +113,8 @@
 							highlightErrors(data.compile_errors);
 							return;
 						}
-						pollfunc = pollHandler("compress", 1000, 10000);
+						pollfunc = pollHandler("compress", 1000, 1000000);
+						clearLog();
 						writeLog(data.messages);
 						pollfunc();
 					},
@@ -125,6 +126,10 @@
 			
 			var logdiv = $('#log');
 			var errordiv = $('#errors');
+			var clearLog = function(){
+				logdiv.empty();
+				errordiv.empty();
+			}
 			var writeLog = function(messages){
 				addLinesToDiv(messages, logdiv);
 			};

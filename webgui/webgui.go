@@ -21,32 +21,41 @@ import (
 )
 
 type Page struct {
-	Title           string
-	WebPort         int
-	SettingsAsJson	string
+	Title          string
+	WebPort        int
+	SettingsAsJson string
 }
 
 type appendSliceWriter struct {
-	Buffer []string
+	Buffer *[]string
 	Eof    bool
 }
 
+func (s *appendSliceWriter) Reset() error {
+
+	b := make([]string, 0, 100)
+	s.Buffer = &b
+	s.Eof = false
+
+	return nil
+}
+
 func (s *appendSliceWriter) Write(p []byte) (int, error) {
-	s.Buffer = append(s.Buffer, string(p))
+	*s.Buffer = append(*s.Buffer, string(p))
 	//imageconvert.WriteInfof("The applendSliceWriter.Write slice length is: %d", len(w))
 	return len(p), nil
 }
 
 func (s *appendSliceWriter) ReadAll() (lines []string) {
-	n := len(s.Buffer)
+	n := len(*s.Buffer)
 	//imageconvert.WriteInfof("The applendSliceWriter.ReadAll() return slice length is: %d", n)
 	if n == 0 {
-		return s.Buffer
+		return *s.Buffer
 	}
 
-	r := s.Buffer[0 : n-1]
+	r := (*s.Buffer)[0:n]
 	// trim the buffer
-	s.Buffer = s.Buffer[n:]
+	*s.Buffer = (*s.Buffer)[n:]
 	return r
 }
 
@@ -63,6 +72,7 @@ var (
 	logger          *appendSliceWriter
 	homeImgDir                         = filepath.Join(settings.GetHomeDir(), "Pictures", "ToResize")
 	defaultSettings *settings.Settings = settings.NewDefaultSettings("", homeImgDir)
+	compressing     bool
 )
 
 func compress(r *http.Request) (msg []string, err error, eof bool) {
@@ -80,9 +90,12 @@ func compress(r *http.Request) (msg []string, err error, eof bool) {
 		eof = true
 		return
 	}
-	_, _, err = launchConversionFromWeb(jsonSettings, logger)
+	if compressing {
+		return nil, errors.New("Still Compressing\n another folder.\nPlese wait until it has finished."), !compressing
+	}
 
-	return []string{fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonSettings.SourceDir, jsonSettings.CollName)}, err, err != nil
+	_, _, err = launchConversionFromWeb(jsonSettings, logger)
+	return []string{fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonSettings.SourceDir, jsonSettings.CollName)}, err, !compressing
 }
 
 func compressStatus(r *http.Request) (msgs []string, err error, eof bool) {
@@ -90,19 +103,18 @@ func compressStatus(r *http.Request) (msgs []string, err error, eof bool) {
 	if len(newLines) > 0 {
 		msgs = newLines
 	}
-	return msgs, nil, logger.Eof
+	return msgs, nil, !compressing
 }
 
 func wrapHandler(processor requestProcessor) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := new(Response)
 		out, err, eof := processor(r)
+		resp.Eof = eof
 		if err != nil {
 			resp.Errors = []string{err.Error()}
-			resp.Eof = true
 		} else {
 			resp.Messages = out
-			resp.Eof = eof
 		}
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			log.Println(err)
@@ -128,7 +140,8 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 	setVariables()
 	// start up a local web server
 
-	logger = &appendSliceWriter{Buffer: make([]string, 0, 100)}
+	b := make([]string, 0, 100)
+	logger = &appendSliceWriter{Buffer: &b}
 
 	imageconvert.WriteInfof("Starting up web server on port %d, click or copy this link to open up the page: %s\n", WEBLOG_PORT, hosturl)
 
@@ -178,12 +191,12 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 					http.ServeFile(w, r, fp)
 					return
 				}
-				
+
 				settingsAsJson, err := json.Marshal(defaultSettings)
 				if err != nil {
 					return
 				}
-				
+
 				p := &Page{WebPort: WEBLOG_PORT, SettingsAsJson: string(settingsAsJson)}
 				renderTemplate(w, fkey, p)
 				return
@@ -324,6 +337,12 @@ func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWri
 
 	go func() {
 
+		defer func() {
+			compressing = false
+			logger.Eof = true
+		}()
+
+		compressing = true
 		// collect responses
 		imageconvert.WriteInfo(fmt.Sprintf("Collecting results. Number of images: %d", fileno))
 
@@ -343,8 +362,9 @@ func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWri
 
 		io.WriteString(logger, fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
 		io.WriteString(logger, "Images successfully resized to folder: "+collPublishFolder)
-		logger.Eof = true
+
 		quitChannel <- true // stopping the server
+
 	}()
 
 	return responseChannel, quitChannel, err
