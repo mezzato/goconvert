@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
+	//"io/ioutil"
 	"log"
 	"net/http"
 	"os/exec"
@@ -73,55 +73,8 @@ var (
 	homeImgDir                         = filepath.Join(settings.GetHomeDir(), "Pictures", "ToResize")
 	defaultSettings *settings.Settings = settings.NewDefaultSettings("", homeImgDir)
 	compressing     bool
+	quitChannel     chan bool
 )
-
-func compress(r *http.Request) (msg []string, err error, eof bool) {
-	var reader io.Reader = r.Body
-	b, err := ioutil.ReadAll(reader)
-	if err != nil {
-		eof = true
-		return
-	}
-	var jsonSettings *settings.Settings
-	fmt.Println("request body: " + string(b))
-	err = json.Unmarshal(b, &jsonSettings)
-	if err != nil {
-		fmt.Println(err)
-		eof = true
-		return
-	}
-	if compressing {
-		return nil, errors.New("Still Compressing\n another folder.\nPlese wait until it has finished."), !compressing
-	}
-
-	_, _, err = launchConversionFromWeb(jsonSettings, logger)
-	return []string{fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonSettings.SourceDir, jsonSettings.CollName)}, err, !compressing
-}
-
-func compressStatus(r *http.Request) (msgs []string, err error, eof bool) {
-	newLines := logger.ReadAll()
-	if len(newLines) > 0 {
-		msgs = newLines
-	}
-	return msgs, nil, !compressing
-}
-
-func wrapHandler(processor requestProcessor) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		resp := new(Response)
-		out, err, eof := processor(r)
-		resp.Eof = eof
-		if err != nil {
-			resp.Errors = []string{err.Error()}
-		} else {
-			resp.Messages = out
-		}
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			log.Println(err)
-		}
-
-	}
-}
 
 var webresources = make(map[string]string)
 
@@ -207,6 +160,7 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 
 		http.HandleFunc("/compress", wrapHandler(compress))
 		http.HandleFunc("/compress/status", wrapHandler(compressStatus))
+		http.HandleFunc("/cancel", wrapHandler(stopCompressing))
 
 		// websocket
 		//http.Handle("/echo", websocket.Handler(echoServer))
@@ -348,16 +302,23 @@ func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWri
 
 		for i := 0; i < fileno; i++ {
 
-			r := <-responseChannel
-			fname := filepath.Base(r.ImgF.Path)
-			var msg string
-			if r.Error == nil {
-				msg = fmt.Sprintf("Success, file %s resized and archived", fname)
-			} else {
-				msg = fmt.Sprintf("Error, file %s, the error was %s", fname, r.Error)
+			select {
+			case <-quitChannel:
+				io.WriteString(logger, "Compression cancelled by the user.")
+				io.WriteString(logger, fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
+				return
+
+			case r := <-responseChannel:
+				fname := filepath.Base(r.ImgF.Path)
+				var msg string
+				if r.Error == nil {
+					msg = fmt.Sprintf("Success, file %s resized and archived", fname)
+				} else {
+					msg = fmt.Sprintf("Error, file %s, the error was %s", fname, r.Error)
+				}
+				imageconvert.WriteInfo(msg)
+				io.WriteString(logger, msg)
 			}
-			imageconvert.WriteInfo(msg)
-			io.WriteString(logger, msg)
 		}
 
 		io.WriteString(logger, fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
