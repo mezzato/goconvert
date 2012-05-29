@@ -278,9 +278,9 @@ func runBrowser(dir string, url string) (cmd *exec.Cmd, err error) {
 
 func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWriter, compressionStatus *bool) (responseChannel chan *imageconvert.Response, quitChannel chan bool, err error) {
 	startNanosecs := time.Now()
-	
+
 	quitChannel = make(chan bool)
-	
+
 	io.WriteString(logger, "Analysing folder and starting up compression.")
 	responseChannel, quit, fileno, collPublishFolder, err := imageconvert.Convert(
 		settings.CollName,
@@ -327,7 +327,6 @@ func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWri
 				io.WriteString(logger, msg)
 			}
 		}
-		
 
 	}()
 

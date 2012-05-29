@@ -249,18 +249,23 @@ func startWorkers(h filehandler, noOfWorkers int) (reqs chan *request, quit chan
 	go func() {
 		for {
 			select {
-			case req := <-reqs:
-				// do not wait here, the buffered request channel is the barrier
-				go func() {
-					sem <- 1 // Wait for active queue to drain.
-					// feed the response channel
-					e := h(req.imgF)
-					req.response <- &Response{req.imgF, e}
-					<-sem // Done; enable next request to run.
-				}()
+
 			case <-quit:
 				WriteInfo("Stopping workers")
 				return // get out
+
+			case req := <-reqs:
+				// do not wait here, the buffered request channel is the barrier
+				//go func() {
+				sem <- 1 // Wait for active queue to drain.
+				// feed the response channel
+
+				// WriteInfof("Processing: %s\n", req.imgF.Path)
+				e := h(req.imgF)
+				req.response <- &Response{req.imgF, e}
+				<-sem // Done; enable next request to run.
+				//}()
+
 			}
 		}
 	}()
@@ -287,6 +292,7 @@ func createResizeHandler(collPublishFolder string, convSets []*imgParams) (handl
 	var resizeHandler = func(img *imgFile) (err error) {
 
 		WriteVerbose(fmt.Sprintf("Resizing img: %s.", filepath.Base(img.Path)))
+		var c *Cmd
 
 		for _, set := range convSets {
 			if len(set.cmdArgs) == 0 {
@@ -310,7 +316,7 @@ func createResizeHandler(collPublishFolder string, convSets []*imgParams) (handl
 			fullCmd = append(fullCmd, set.cmdArgs...)
 			fullCmd = append(fullCmd, newImgPath)
 
-			c := &Cmd{Args: fullCmd}
+			c = &Cmd{Args: fullCmd}
 			WriteVerbose("Running cmd:", c)
 			err = c.Run()
 			if err != nil {
@@ -380,6 +386,17 @@ func (c *Cmd) Run() error {
 	cmd.Env = c.Env
 	cmd.Stdout = out
 	cmd.Stderr = out
+
+	// remember to release the process
+	defer func() {
+		if cmd != nil {
+			if err := cmd.Process.Release(); err != nil {
+				//panic(err)
+				//WriteInfof("Error while waiting releasing the process %s to finish\n",cmd.Args[0])
+			}
+		}
+	}()
+
 	if c.Stdout != "" {
 		f, err := os.Create(c.Stdout)
 		if err != nil {
@@ -391,5 +408,6 @@ func (c *Cmd) Run() error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("command %q: %v\n%v", c, err, out)
 	}
+
 	return nil
 }

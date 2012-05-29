@@ -52,7 +52,7 @@ func compress(r *http.Request) (msg []string, err error, eof bool) {
 	go func() {
 		_, quitChannel, err = launchConversionFromWeb(jsonSettings, logger, &compressing)
 	}()
-	
+
 	return []string{fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonSettings.SourceDir, jsonSettings.CollName)}, err, !compressing
 }
 
