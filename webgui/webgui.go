@@ -276,9 +276,13 @@ func runBrowser(dir string, url string) (cmd *exec.Cmd, err error) {
 	return nil, errors.New("No known browser could be started. Do it manually!")
 }
 
-func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWriter) (responseChannel chan *imageconvert.Response, quitChannel chan bool, err error) {
+func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWriter, compressionStatus *bool) (responseChannel chan *imageconvert.Response, quitChannel chan bool, err error) {
 	startNanosecs := time.Now()
-	responseChannel, quitChannel, fileno, collPublishFolder, err := imageconvert.Convert(
+	
+	quitChannel = make(chan bool)
+	
+	io.WriteString(logger, "Analysing folder and starting up compression.")
+	responseChannel, quit, fileno, collPublishFolder, err := imageconvert.Convert(
 		settings.CollName,
 		settings.SourceDir,
 		settings.PublishDir,
@@ -292,11 +296,14 @@ func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWri
 	go func() {
 
 		defer func() {
-			compressing = false
+			quit <- true // stopping the server
+			*compressionStatus = false
 			logger.Eof = true
+			io.WriteString(logger, fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
+			io.WriteString(logger, "Images successfully resized to folder: "+collPublishFolder)
 		}()
 
-		compressing = true
+		*compressionStatus = true
 		// collect responses
 		imageconvert.WriteInfo(fmt.Sprintf("Collecting results. Number of images: %d", fileno))
 
@@ -320,11 +327,7 @@ func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWri
 				io.WriteString(logger, msg)
 			}
 		}
-
-		io.WriteString(logger, fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
-		io.WriteString(logger, "Images successfully resized to folder: "+collPublishFolder)
-
-		quitChannel <- true // stopping the server
+		
 
 	}()
 

@@ -259,7 +259,7 @@ func startWorkers(h filehandler, noOfWorkers int) (reqs chan *request, quit chan
 					<-sem // Done; enable next request to run.
 				}()
 			case <-quit:
-				WriteVerbose("Stopping workers")
+				WriteInfo("Stopping workers")
 				return // get out
 			}
 		}

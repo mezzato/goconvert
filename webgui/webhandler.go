@@ -47,8 +47,11 @@ func compress(r *http.Request) (msg []string, err error, eof bool) {
 		return nil, errors.New("Still Compressing\n another folder.\nPlese wait until it has finished."), !compressing
 	}
 
-	
-	_, quitChannel, err = launchConversionFromWeb(jsonSettings, logger)
+	compressing = true
+	// launch asynchronously to avoid delays
+	go func() {
+		_, quitChannel, err = launchConversionFromWeb(jsonSettings, logger, &compressing)
+	}()
 	
 	return []string{fmt.Sprintf("Compressing\nfolder: %s\nCollection name: %s", jsonSettings.SourceDir, jsonSettings.CollName)}, err, !compressing
 }
@@ -62,10 +65,10 @@ func compressStatus(r *http.Request) (msgs []string, err error, eof bool) {
 }
 
 func stopCompressing(r *http.Request) (msgs []string, err error, eof bool) {
-	if !compressing {
+	if !compressing || quitChannel == nil {
 		return nil, errors.New("No compression has been launched yet."), false
 	}
 
 	quitChannel <- true
-	return nil, nil, !compressing
+	return []string{"Stopping the compression"}, nil, !compressing
 }
