@@ -74,11 +74,14 @@ func getFileExifInfo(fp string) (timestamp string, sortkey string, err error) {
 }
 
 func newImgFile(fpath string) (i *imgFile, err error) {
-	var ts, sk string
-	ts, sk, err = getFileExifInfo(fpath)
-	if err != nil {
-		return
+	ts, sk, err1 := getFileExifInfo(fpath)
+	
+	if err1 != nil {
+		//return
+		WriteInfof("Error getting image EXIF info: %s\n", err1)
 	}
+	
+	err = nil
 	return &imgFile{ts, sk, fpath}, err
 }
 

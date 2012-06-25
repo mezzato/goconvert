@@ -102,7 +102,7 @@ Have fun!
 	usewebgui, srcfolder, collectionname := ParseCommandLine()
 
 	// remove this once tested
-	usewebgui = true
+	// usewebgui = true
 	settings.Debug = true
 
 	if usewebgui {

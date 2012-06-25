@@ -4,7 +4,177 @@ package webgui
 // webresources["index.html"] = etc...
 // webresources["css/style.css"] = etc...
 
-func setVariables() {webresources["index.html"] = `
+func setVariables() {webresources["test.html"] = `<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8"/>
+	<title>Simple Web Socket Client</title>
+	<link rel="stylesheet" type="text/css" href="css/reset.css"/>
+	<link rel="stylesheet" type="text/css" href="css/style.css"/>
+</head>
+<body>
+<div id="content">
+	<fieldset>
+		<legend>Server Location</legend>
+		<div>
+			<label>URL:</label>
+			<input type="text" id="serverUrl" value="ws://"/>
+			<button id="connectButton">Open</button>
+			<button id="disconnectButton">Close</button>
+		</div>
+		<div>
+			<label>Status:</label>
+			<span id="connectionStatus">CLOSED</span>
+		</div>
+	</fieldset>
+	<fieldset id="requestArea">
+		<legend>Request</legend>
+		<div>
+			<textarea id="sendMessage" disabled="disabled"></textarea>
+		</div>
+		<div>
+			<button id="sendButton" disabled="disabled">Send</button>
+			[Shortcut] Ctr + Enter
+		</div>
+	</fieldset>
+	<fieldset id="messageArea">
+		<legend>Message Log <button id="clearMessage">Clear</button></legend>
+		<div id="messages"></div>
+	</fieldset>
+</div>
+<script type="text/javascript" src="scripts/jquery-1.7.js"></script>
+<script type="text/javascript" src="scripts/index.js"></script>
+</body>
+</html>`
+webresources["index.js"] = `new function() {
+	var ws = null;
+	var connected = false;
+
+	var serverUrl;
+	var connectionStatus;
+	var sendMessage;
+	
+	var connectButton;
+	var disconnectButton; 
+	var sendButton;
+
+	var open = function() {
+		var url = serverUrl.val();
+		ws = new WebSocket(url);
+		ws.onopen = onOpen;
+		ws.onclose = onClose;
+		ws.onmessage = onMessage;
+		ws.onerror = onError;
+
+		connectionStatus.text('OPENING ...');
+		serverUrl.attr('disabled', 'disabled');
+		connectButton.hide();
+		disconnectButton.show();
+	}
+	
+	var close = function() {
+		if (ws) {
+			console.log('CLOSING ...');
+			ws.close();
+		}
+		connected = false;
+		connectionStatus.text('CLOSED');
+
+		serverUrl.removeAttr('disabled');
+		connectButton.show();
+		disconnectButton.hide();
+		sendMessage.attr('disabled', 'disabled');
+		sendButton.attr('disabled', 'disabled');
+	}
+	
+	var clearLog = function() {
+		$('#messages').html('');
+	}
+	
+	var onOpen = function() {
+		console.log('OPENED: ' + serverUrl.val());
+		connected = true;
+		connectionStatus.text('OPENED');
+		sendMessage.removeAttr('disabled');
+		sendButton.removeAttr('disabled');
+	};
+	
+	var onClose = function() {
+		console.log('CLOSED: ' + serverUrl.val());
+		ws = null;
+	};
+	
+	var onMessage = function(event) {
+		var data = event.data;
+		addMessage(data);
+	};
+	
+	var onError = function(event) {
+		alert(event.data);
+	}
+	
+	var addMessage = function(data, type) {
+		var msg = $('<pre>').text(data);
+		if (type === 'SENT') {
+			msg.addClass('sent');
+		}
+		var messages = $('#messages');
+		messages.append(msg);
+		
+		var msgBox = messages.get(0);
+		while (msgBox.childNodes.length > 1000) {
+			msgBox.removeChild(msgBox.firstChild);
+		}
+		msgBox.scrollTop = msgBox.scrollHeight;
+	}
+
+	WebSocketClient = {
+		init: function() {
+			serverUrl = $('#serverUrl');
+			connectionStatus = $('#connectionStatus');
+			sendMessage = $('#sendMessage');
+			
+			connectButton = $('#connectButton');
+			disconnectButton = $('#disconnectButton'); 
+			sendButton = $('#sendButton');
+			
+			connectButton.click(function(e) {
+				close();
+				open();
+			});
+		
+			disconnectButton.click(function(e) {
+				close();
+			});
+			
+			sendButton.click(function(e) {
+				var msg = $('#sendMessage').val();
+				addMessage(msg, 'SENT');
+				ws.send(msg);
+			});
+			
+			$('#clearMessage').click(function(e) {
+				clearLog();
+			});
+			
+			var isCtrl;
+			sendMessage.keyup(function (e) {
+				if(e.which == 17) isCtrl=false;
+			}).keydown(function (e) {
+				if(e.which == 17) isCtrl=true;
+				if(e.which == 13 && isCtrl == true) {
+					sendButton.click();
+					return false;
+				}
+			});
+		}
+	};
+}
+
+$(function() {
+	WebSocketClient.init();
+});`
+webresources["index.html"] = `
 <!doctype html>
 <html>
 <head>
@@ -177,176 +347,6 @@ func setVariables() {webresources["index.html"] = `
 </html>
 
 `
-webresources["index.js"] = `new function() {
-	var ws = null;
-	var connected = false;
-
-	var serverUrl;
-	var connectionStatus;
-	var sendMessage;
-	
-	var connectButton;
-	var disconnectButton; 
-	var sendButton;
-
-	var open = function() {
-		var url = serverUrl.val();
-		ws = new WebSocket(url);
-		ws.onopen = onOpen;
-		ws.onclose = onClose;
-		ws.onmessage = onMessage;
-		ws.onerror = onError;
-
-		connectionStatus.text('OPENING ...');
-		serverUrl.attr('disabled', 'disabled');
-		connectButton.hide();
-		disconnectButton.show();
-	}
-	
-	var close = function() {
-		if (ws) {
-			console.log('CLOSING ...');
-			ws.close();
-		}
-		connected = false;
-		connectionStatus.text('CLOSED');
-
-		serverUrl.removeAttr('disabled');
-		connectButton.show();
-		disconnectButton.hide();
-		sendMessage.attr('disabled', 'disabled');
-		sendButton.attr('disabled', 'disabled');
-	}
-	
-	var clearLog = function() {
-		$('#messages').html('');
-	}
-	
-	var onOpen = function() {
-		console.log('OPENED: ' + serverUrl.val());
-		connected = true;
-		connectionStatus.text('OPENED');
-		sendMessage.removeAttr('disabled');
-		sendButton.removeAttr('disabled');
-	};
-	
-	var onClose = function() {
-		console.log('CLOSED: ' + serverUrl.val());
-		ws = null;
-	};
-	
-	var onMessage = function(event) {
-		var data = event.data;
-		addMessage(data);
-	};
-	
-	var onError = function(event) {
-		alert(event.data);
-	}
-	
-	var addMessage = function(data, type) {
-		var msg = $('<pre>').text(data);
-		if (type === 'SENT') {
-			msg.addClass('sent');
-		}
-		var messages = $('#messages');
-		messages.append(msg);
-		
-		var msgBox = messages.get(0);
-		while (msgBox.childNodes.length > 1000) {
-			msgBox.removeChild(msgBox.firstChild);
-		}
-		msgBox.scrollTop = msgBox.scrollHeight;
-	}
-
-	WebSocketClient = {
-		init: function() {
-			serverUrl = $('#serverUrl');
-			connectionStatus = $('#connectionStatus');
-			sendMessage = $('#sendMessage');
-			
-			connectButton = $('#connectButton');
-			disconnectButton = $('#disconnectButton'); 
-			sendButton = $('#sendButton');
-			
-			connectButton.click(function(e) {
-				close();
-				open();
-			});
-		
-			disconnectButton.click(function(e) {
-				close();
-			});
-			
-			sendButton.click(function(e) {
-				var msg = $('#sendMessage').val();
-				addMessage(msg, 'SENT');
-				ws.send(msg);
-			});
-			
-			$('#clearMessage').click(function(e) {
-				clearLog();
-			});
-			
-			var isCtrl;
-			sendMessage.keyup(function (e) {
-				if(e.which == 17) isCtrl=false;
-			}).keydown(function (e) {
-				if(e.which == 17) isCtrl=true;
-				if(e.which == 13 && isCtrl == true) {
-					sendButton.click();
-					return false;
-				}
-			});
-		}
-	};
-}
-
-$(function() {
-	WebSocketClient.init();
-});`
-webresources["test.html"] = `<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="utf-8"/>
-	<title>Simple Web Socket Client</title>
-	<link rel="stylesheet" type="text/css" href="css/reset.css"/>
-	<link rel="stylesheet" type="text/css" href="css/style.css"/>
-</head>
-<body>
-<div id="content">
-	<fieldset>
-		<legend>Server Location</legend>
-		<div>
-			<label>URL:</label>
-			<input type="text" id="serverUrl" value="ws://"/>
-			<button id="connectButton">Open</button>
-			<button id="disconnectButton">Close</button>
-		</div>
-		<div>
-			<label>Status:</label>
-			<span id="connectionStatus">CLOSED</span>
-		</div>
-	</fieldset>
-	<fieldset id="requestArea">
-		<legend>Request</legend>
-		<div>
-			<textarea id="sendMessage" disabled="disabled"></textarea>
-		</div>
-		<div>
-			<button id="sendButton" disabled="disabled">Send</button>
-			[Shortcut] Ctr + Enter
-		</div>
-	</fieldset>
-	<fieldset id="messageArea">
-		<legend>Message Log <button id="clearMessage">Clear</button></legend>
-		<div id="messages"></div>
-	</fieldset>
-</div>
-<script type="text/javascript" src="scripts/jquery-1.7.js"></script>
-<script type="text/javascript" src="scripts/index.js"></script>
-</body>
-</html>`
 webresources["css/reset.css"] = `/* 
 html5doctor.com Reset Stylesheet
 v1.4.1 
@@ -519,134 +519,6 @@ label {
 #messages pre.sent {
 	color: #f63;
 }`
-webresources["scripts/index.js"] = `new function() {
-	var ws = null;
-	var connected = false;
-
-	var serverUrl;
-	var connectionStatus;
-	var sendMessage;
-	
-	var connectButton;
-	var disconnectButton; 
-	var sendButton;
-
-	var open = function() {
-		var url = serverUrl.val();
-		ws = new WebSocket(url);
-		ws.onopen = onOpen;
-		ws.onclose = onClose;
-		ws.onmessage = onMessage;
-		ws.onerror = onError;
-
-		connectionStatus.text('OPENING ...');
-		serverUrl.attr('disabled', 'disabled');
-		connectButton.hide();
-		disconnectButton.show();
-	}
-	
-	var close = function() {
-		if (ws) {
-			console.log('CLOSING ...');
-			ws.close();
-		}
-		connected = false;
-		connectionStatus.text('CLOSED');
-
-		serverUrl.removeAttr('disabled');
-		connectButton.show();
-		disconnectButton.hide();
-		sendMessage.attr('disabled', 'disabled');
-		sendButton.attr('disabled', 'disabled');
-	}
-	
-	var clearLog = function() {
-		$('#messages').html('');
-	}
-	
-	var onOpen = function() {
-		console.log('OPENED: ' + serverUrl.val());
-		connected = true;
-		connectionStatus.text('OPENED');
-		sendMessage.removeAttr('disabled');
-		sendButton.removeAttr('disabled');
-	};
-	
-	var onClose = function() {
-		console.log('CLOSED: ' + serverUrl.val());
-		ws = null;
-	};
-	
-	var onMessage = function(event) {
-		var data = event.data;
-		addMessage(data);
-	};
-	
-	var onError = function(event) {
-		alert(event.data);
-	}
-	
-	var addMessage = function(data, type) {
-		var msg = $('<pre>').text(data);
-		if (type === 'SENT') {
-			msg.addClass('sent');
-		}
-		var messages = $('#messages');
-		messages.append(msg);
-		
-		var msgBox = messages.get(0);
-		while (msgBox.childNodes.length > 1000) {
-			msgBox.removeChild(msgBox.firstChild);
-		}
-		msgBox.scrollTop = msgBox.scrollHeight;
-	}
-
-	WebSocketClient = {
-		init: function() {
-			serverUrl = $('#serverUrl');
-			connectionStatus = $('#connectionStatus');
-			sendMessage = $('#sendMessage');
-			
-			connectButton = $('#connectButton');
-			disconnectButton = $('#disconnectButton'); 
-			sendButton = $('#sendButton');
-			
-			connectButton.click(function(e) {
-				close();
-				open();
-			});
-		
-			disconnectButton.click(function(e) {
-				close();
-			});
-			
-			sendButton.click(function(e) {
-				var msg = $('#sendMessage').val();
-				addMessage(msg, 'SENT');
-				ws.send(msg);
-			});
-			
-			$('#clearMessage').click(function(e) {
-				clearLog();
-			});
-			
-			var isCtrl;
-			sendMessage.keyup(function (e) {
-				if(e.which == 17) isCtrl=false;
-			}).keydown(function (e) {
-				if(e.which == 17) isCtrl=true;
-				if(e.which == 13 && isCtrl == true) {
-					sendButton.click();
-					return false;
-				}
-			});
-		}
-	};
-}
-
-$(function() {
-	WebSocketClient.init();
-});`
 webresources["scripts/jquery-1.7.js"] = `/*!
  * jQuery JavaScript Library v1.7
  * http://jquery.com/
@@ -9948,5 +9820,133 @@ jQuery.each([ "Height", "Width" ], function( i, name ) {
 window.jQuery = window.$ = jQuery;
 })( window );
 `
+webresources["scripts/index.js"] = `new function() {
+	var ws = null;
+	var connected = false;
+
+	var serverUrl;
+	var connectionStatus;
+	var sendMessage;
+	
+	var connectButton;
+	var disconnectButton; 
+	var sendButton;
+
+	var open = function() {
+		var url = serverUrl.val();
+		ws = new WebSocket(url);
+		ws.onopen = onOpen;
+		ws.onclose = onClose;
+		ws.onmessage = onMessage;
+		ws.onerror = onError;
+
+		connectionStatus.text('OPENING ...');
+		serverUrl.attr('disabled', 'disabled');
+		connectButton.hide();
+		disconnectButton.show();
+	}
+	
+	var close = function() {
+		if (ws) {
+			console.log('CLOSING ...');
+			ws.close();
+		}
+		connected = false;
+		connectionStatus.text('CLOSED');
+
+		serverUrl.removeAttr('disabled');
+		connectButton.show();
+		disconnectButton.hide();
+		sendMessage.attr('disabled', 'disabled');
+		sendButton.attr('disabled', 'disabled');
+	}
+	
+	var clearLog = function() {
+		$('#messages').html('');
+	}
+	
+	var onOpen = function() {
+		console.log('OPENED: ' + serverUrl.val());
+		connected = true;
+		connectionStatus.text('OPENED');
+		sendMessage.removeAttr('disabled');
+		sendButton.removeAttr('disabled');
+	};
+	
+	var onClose = function() {
+		console.log('CLOSED: ' + serverUrl.val());
+		ws = null;
+	};
+	
+	var onMessage = function(event) {
+		var data = event.data;
+		addMessage(data);
+	};
+	
+	var onError = function(event) {
+		alert(event.data);
+	}
+	
+	var addMessage = function(data, type) {
+		var msg = $('<pre>').text(data);
+		if (type === 'SENT') {
+			msg.addClass('sent');
+		}
+		var messages = $('#messages');
+		messages.append(msg);
+		
+		var msgBox = messages.get(0);
+		while (msgBox.childNodes.length > 1000) {
+			msgBox.removeChild(msgBox.firstChild);
+		}
+		msgBox.scrollTop = msgBox.scrollHeight;
+	}
+
+	WebSocketClient = {
+		init: function() {
+			serverUrl = $('#serverUrl');
+			connectionStatus = $('#connectionStatus');
+			sendMessage = $('#sendMessage');
+			
+			connectButton = $('#connectButton');
+			disconnectButton = $('#disconnectButton'); 
+			sendButton = $('#sendButton');
+			
+			connectButton.click(function(e) {
+				close();
+				open();
+			});
+		
+			disconnectButton.click(function(e) {
+				close();
+			});
+			
+			sendButton.click(function(e) {
+				var msg = $('#sendMessage').val();
+				addMessage(msg, 'SENT');
+				ws.send(msg);
+			});
+			
+			$('#clearMessage').click(function(e) {
+				clearLog();
+			});
+			
+			var isCtrl;
+			sendMessage.keyup(function (e) {
+				if(e.which == 17) isCtrl=false;
+			}).keydown(function (e) {
+				if(e.which == 17) isCtrl=true;
+				if(e.which == 13 && isCtrl == true) {
+					sendButton.click();
+					return false;
+				}
+			});
+		}
+	};
+}
+
+$(function() {
+	WebSocketClient.init();
+});`
 
 return }
