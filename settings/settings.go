@@ -1,7 +1,7 @@
 package settings
 
 import (
-	conf "code.google.com/p/goconf"
+	conf "code.google.com/p/goconf/conf"
 	"errors"
 	"fmt"
 	"log"
