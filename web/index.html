@@ -27,9 +27,7 @@
 	</section>
 	<section id="logsection">
 		<span>Output log</span>
-		<div id="log">
-		
-		</div>
+		<div id="outputlog"></div>
 	</section>
 	<section id="errorsection">
 		<span>Error log</span>
@@ -37,20 +35,27 @@
 		
 		</div>
 	</section>
-	<!-- 
-<script src="http://www.google.com/jsapi"></script>
-<script>google.load("jquery", "1.3")</script>
-<script src="http://jquery-json.googlecode.com/files/jquery.json-2.2.min.js"></script>
-<script src="http://jquery-websocket.googlecode.com/files/jquery.websocket-0.0.1.js"></script>
- -->
-	<script type="text/javascript" src="scripts/jquery-1.7.js"></script>
+	
+	
+	<script type="text/javascript" src="scripts/jquery-2.0.3.js"></script>
 	<script>
+		var convertModule = (function(mod) {
+			mod.settings =  JSON.parse('{{.SettingsAsJson}}');
+			return mod
+		})(convertModule || {});
 	
 		$(function(){
-			
-			var settings =  JSON.parse('{{.SettingsAsJson}}');
-			$('#folder').val(settings && settings.homeDir);
-			
+			$('#folder').val(convertModule.settings && convertModule.settings.homeDir);
+		});
+	</script>
+	
+	<script type="text/javascript" src="scripts/socket.js"></script>
+	<script type="text/javascript" src="scripts/play.js"></script>
+	
+	<script>
+		
+		/*
+		$(function(){
 			var pollHandler = function(op, poll_interval_msec, timeout_msec){
 				t = 0;
 				var doPoll = function(){
@@ -80,13 +85,6 @@
 				return doPoll;
 			};
 		
-		/*
-			 var ws = $.websocket("ws://127.0.0.1:{{.WebPort |html}}/echo", {
-			 events: {
-			 message: function(e) { $('#content').append(e.data + '<br>') }
-			 }
-			 });
-			 */
 			
 			$('#compress').click(function() {
 				
@@ -166,6 +164,8 @@
 				
 			};
 		});
+		*/
+		
 	</script>
 </body>
 </html>

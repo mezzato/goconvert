@@ -158,6 +158,8 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 		})
 		http.Handle("/"+webroot+"/", http.FileServer(http.Dir(webroot)))
 
+		// web socket
+		http.Handle("/socket", websocketHandler)
 		http.HandleFunc("/compress", wrapHandler(compress))
 		http.HandleFunc("/compress/status", wrapHandler(compressStatus))
 		http.HandleFunc("/cancel", wrapHandler(stopCompressing))
@@ -276,7 +278,7 @@ func runBrowser(dir string, url string) (cmd *exec.Cmd, err error) {
 	return nil, errors.New("No known browser could be started. Do it manually!")
 }
 
-func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWriter, compressionStatus *bool) (responseChannel chan *imageconvert.Response, quitChannel chan bool, err error) {
+func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWriter, compressionStatus *bool) (responseChannel chan *imageconvert.ConvertResponse, quitChannel chan bool, err error) {
 	startNanosecs := time.Now()
 
 	quitChannel = make(chan bool)

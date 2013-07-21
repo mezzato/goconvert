@@ -67,6 +67,7 @@ type Settings struct {
 	PiwigoGalleryHighDirName string              `json:"piwigoGalleryHighDirName"`
 	ConversionSettings       *ConversionSettings `json:"conversionSettings"`
 	FtpSettings              *FtpSettings        `json:"ftpSettings"`
+	TimeoutMsec              int                 `json:"timeout_msec"`
 }
 
 func newSettings() *Settings {
@@ -74,6 +75,7 @@ func newSettings() *Settings {
 	s.ConversionSettings = new(ConversionSettings)
 	s.FtpSettings = new(FtpSettings)
 	s.SourceDir = "."
+	s.TimeoutMsec = 10000
 	return s
 }
 
