@@ -5,13 +5,14 @@ import (
 	"os"
 	//"go/build"
 	"code.google.com/p/goconvert/imageconvert"
+	lg "code.google.com/p/goconvert/logger"
 	settings "code.google.com/p/goconvert/settings"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
 	//"io/ioutil"
-	"log"
+	//"log"
 	"net/http"
 	"os/exec"
 	"path/filepath"
@@ -70,6 +71,7 @@ type requestProcessor func(r *http.Request) (msgs []string, err error, eof bool)
 var (
 	templates       = make(map[string]*template.Template)
 	logger          *appendSliceWriter
+	slogger         lg.SemanticLogger  = lg.NewConsoleSemanticLogger("goconvert", os.Stdout, lg.INFO)
 	homeImgDir                         = filepath.Join(settings.GetHomeDir(), "Pictures", "ToResize")
 	defaultSettings *settings.Settings = settings.NewDefaultSettings("", homeImgDir)
 	compressing     bool
@@ -96,13 +98,13 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 	b := make([]string, 0, 100)
 	logger = &appendSliceWriter{Buffer: &b}
 
-	imageconvert.WriteInfof("Starting up web server on port %d, click or copy this link to open up the page: %s\n", WEBLOG_PORT, hosturl)
+	slogger.Info(fmt.Sprintf("Starting up web server on port %d, click or copy this link to open up the page: %s", WEBLOG_PORT, hosturl))
 
 	// find and serve the goconvert files
 	//t, _, err := build.FindTree(basePkg)
 
 	if err != nil {
-		log.Printf("Couldn't find goconvert files: %v\n", err)
+		slogger.Info(fmt.Sprintf("Couldn't find goconvert files: %v", err))
 	} else {
 		//root := webroot //filepath.Join(t.SrcDir(), basePkg, webroot)
 
@@ -112,7 +114,7 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 
 			// write out to let it be served later as a static file
 			fp := filepath.Join(webroot, k)
-			imageconvert.WriteInfo("Deploying resource to file system:", fp)
+			slogger.Info(fmt.Sprintf("Deploying resource to file system:%s", fp))
 			err = createFileAndWriteText(fp, v)
 			if err != nil {
 				return
@@ -120,7 +122,7 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 
 		}
 
-		imageconvert.WriteInfo("Serving content from", webroot)
+		slogger.Info(fmt.Sprintf("Serving content from %s", webroot))
 
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			//WriteInfo("Handler for / called. URL.Path = " + r.URL.Path)
@@ -140,7 +142,7 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 				//_, ok := templates[fkey]
 				if !strings.HasSuffix(fkey, "html") {
 					//fp := filepath.Join(webroot, r.URL.Path[1:])
-					imageconvert.WriteInfo("Serving static resource:", fp)
+					slogger.Info(fmt.Sprintf("Serving static resource:%s", fp))
 					http.ServeFile(w, r, fp)
 					return
 				}
@@ -169,9 +171,9 @@ func StartWebgui() (browserCmd *exec.Cmd, server *Server, err error) {
 		//http.Handle("/echo", websocket.Draft75Handler(echoServer))
 		server = NewServer(nil)
 		serverAddr := server.Listener.Addr().String()
-		log.Print("Test WebSocket server listening on ", serverAddr)
+		slogger.Info(fmt.Sprintf("Test WebSocket server listening on %s", serverAddr))
 
-		imageconvert.WriteInfof("Serving at http://%s/\n", serverAddr)
+		slogger.Info(fmt.Sprintf("Serving at http://%s/", serverAddr))
 		// go http.ListenAndServe(*httpListen, nil)
 		browserCmd, _ = runBrowser(".", serverAddr)
 
@@ -202,7 +204,7 @@ func createFileAndWriteText(fp string, text string) (err error) {
 		}
 	*/
 
-	imageconvert.WriteInfo("Creating file:", fp)
+	slogger.Info(fmt.Sprintf("Creating file:%s", fp))
 	f, err = os.Create(fp)
 
 	if err != nil {
@@ -227,7 +229,7 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 		s, e := os.Stat(fp)
 		if e == nil && !s.IsDir() {
 			t = template.Must(template.New(tmpl).ParseFiles(fp))
-			imageconvert.WriteInfof("Loaded template \"%s\" from file system.\n", fp)
+			slogger.Info(fmt.Sprintf("Loaded template \"%s\" from file system.", fp))
 		} else {
 			http.Error(w, fmt.Sprintf("template %s does not exist", tmpl), http.StatusInternalServerError)
 			return
@@ -307,7 +309,7 @@ func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWri
 
 		*compressionStatus = true
 		// collect responses
-		imageconvert.WriteInfo(fmt.Sprintf("Collecting results. Number of images: %d", fileno))
+		slogger.Info(fmt.Sprintf("Collecting results. Number of images: %d", fileno))
 
 		for i := 0; i < fileno; i++ {
 
@@ -325,7 +327,7 @@ func launchConversionFromWeb(settings *settings.Settings, logger *appendSliceWri
 				} else {
 					msg = fmt.Sprintf("Error, file %s, the error was %s", fname, r.Error)
 				}
-				imageconvert.WriteInfo(msg)
+				slogger.Info(msg)
 				io.WriteString(logger, msg)
 			}
 		}

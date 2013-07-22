@@ -2,6 +2,7 @@ package settings
 
 import (
 	conf "code.google.com/p/goconf/conf"
+	logger "code.google.com/p/goconvert/logger"
 	"errors"
 	"fmt"
 	"log"
@@ -58,16 +59,17 @@ func (sets *ConversionSettings) AreaInPixed() int {
 
 // settings
 type Settings struct {
-	SaveConfig               bool                `json:"saveConfig"`
-	CollName                 string              `json:"collName"`
-	SourceDir                string              `json:"sourceDir"`
-	PublishDir               string              `json:"publishDir"`
-	HomeDir                  string              `json:"homeDir"`
-	PiwigoGalleryDir         string              `json:"piwigoGalleryDir"`
-	PiwigoGalleryHighDirName string              `json:"piwigoGalleryHighDirName"`
-	ConversionSettings       *ConversionSettings `json:"conversionSettings"`
-	FtpSettings              *FtpSettings        `json:"ftpSettings"`
-	TimeoutMsec              int                 `json:"timeout_msec"`
+	SaveConfig               bool                  `json:"saveConfig"`
+	CollName                 string                `json:"collName"`
+	SourceDir                string                `json:"sourceDir"`
+	PublishDir               string                `json:"publishDir"`
+	HomeDir                  string                `json:"homeDir"`
+	PiwigoGalleryDir         string                `json:"piwigoGalleryDir"`
+	PiwigoGalleryHighDirName string                `json:"piwigoGalleryHighDirName"`
+	ConversionSettings       *ConversionSettings   `json:"conversionSettings"`
+	FtpSettings              *FtpSettings          `json:"ftpSettings"`
+	TimeoutMsec              int                   `json:"timeout_msec"`
+	Logger                   logger.SemanticLogger `json:"-"`
 }
 
 func newSettings() *Settings {
@@ -76,6 +78,7 @@ func newSettings() *Settings {
 	s.FtpSettings = new(FtpSettings)
 	s.SourceDir = "."
 	s.TimeoutMsec = 10000
+	s.Logger = logger.NewConsoleSemanticLogger("goconvert", os.Stdout, logger.INFO)
 	return s
 }
 

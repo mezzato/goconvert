@@ -62,7 +62,7 @@ func createWorker(timeoutMsec int, cmd *Executor, id string, outCh chan<- (*Mess
 				err := executeWithTimeout(cmd, timeoutMsec, tr)
 
 				if err != nil {
-					msg := fmt.Sprintf("Step: %s for image file %s failed to process due to error %v\n", cmd.StepName, tr.Path, err)
+					msg := fmt.Sprintf("%s for image %s failed to process due to error %v\n", cmd.StepName, tr.Path, err)
 					outCh <- &Message{
 						Id: id, Kind: "stderr",
 						Body: msg,
@@ -73,7 +73,7 @@ func createWorker(timeoutMsec int, cmd *Executor, id string, outCh chan<- (*Mess
 
 				outCh <- &Message{
 					Id: id, Kind: "stdout",
-					Body: fmt.Sprintf("Step: %s for image file %s correctly executed\n", cmd.StepName, tr.Path),
+					Body: fmt.Sprintf("%s for image %s correctly executed\n", cmd.StepName, tr.Path),
 				}
 
 				//fmt.Printf("worker %s processed without errors\n", cmd.Step)
@@ -142,7 +142,7 @@ func errRecover(errp *error) {
 func (p *Process) createResizeExecutor(collPublishFolder string, convSets []*imgParams) (executor *Executor) {
 	var resizeHandler = func(img *imgFile) (err error) {
 
-		WriteVerbose(fmt.Sprintf("Resizing img: %s.", filepath.Base(img.Path)))
+		p.Logger.Debug(fmt.Sprintf("Resizing img: %s.", filepath.Base(img.Path)))
 
 		for _, set := range convSets {
 			if len(set.cmdArgs) == 0 {
@@ -154,7 +154,7 @@ func (p *Process) createResizeExecutor(collPublishFolder string, convSets []*img
 			var fi os.FileInfo
 			if fi, err = os.Stat(subFolderPath); err != nil || !fi.IsDir() {
 				// create dirs
-				WriteVerbose("Creating folder:", subFolderPath)
+				p.Logger.Debug(fmt.Sprintf("Creating folder:%s", subFolderPath))
 				if err = os.MkdirAll(subFolderPath, 0777); err != nil {
 					return err
 				}
@@ -167,7 +167,7 @@ func (p *Process) createResizeExecutor(collPublishFolder string, convSets []*img
 			fullCmd = append(fullCmd, newImgPath)
 
 			c := p.cmd("", fullCmd...) //&Cmd{Args: fullCmd}
-			WriteVerbose("Running cmd:", c)
+			p.Logger.Debug(fmt.Sprintf("Running cmd:%s", c))
 			err = c.Run()
 			if err != nil {
 				return
@@ -185,7 +185,7 @@ func (p *Process) createArchiveExecutor(collArchiveFolder string, moveOriginal b
 		var fi os.FileInfo
 		if fi, err = os.Stat(collArchiveFolder); err != nil || !fi.IsDir() {
 			// create dirs
-			WriteVerbose("Creating folder:", collArchiveFolder)
+			p.Logger.Debug(fmt.Sprintf("Creating folder:", collArchiveFolder))
 			if err = os.MkdirAll(collArchiveFolder, 0777); err != nil {
 				return err
 			}
@@ -193,10 +193,10 @@ func (p *Process) createArchiveExecutor(collArchiveFolder string, moveOriginal b
 		movePath := filepath.Join(collArchiveFolder, filepath.Base(img.Path))
 
 		if moveOriginal {
-			WriteVerbose("Archiving original file to:", movePath)
+			p.Logger.Debug(fmt.Sprintf("Archiving original file to:%s", movePath))
 			os.Rename(img.Path, movePath)
 		} else {
-			WriteVerbose("Copying original file to:", movePath)
+			p.Logger.Debug(fmt.Sprintf("Copying original file to:%s", movePath))
 			// take a copy
 			f, _ := os.Open(img.Path)
 			defer f.Close()
@@ -215,53 +215,3 @@ func (p *Process) createArchiveExecutor(collArchiveFolder string, moveOriginal b
 	}
 	return &Executor{StepName: "archive", Do: archiveHandler}
 }
-
-// Cmd
-
-/*
-// A Cmd describes an individual command.
-type Cmd struct {
-	Args   []string // command-line
-	Stdout string   // write standard output to this file, "" is passthrough
-	Dir    string   // working directory
-	Env    []string // environment
-}
-
-func (c *Cmd) String() string {
-	return strings.Join(c.Args, " ")
-}
-
-// Run executes the Cmd.
-func (c *Cmd) Run() error {
-	out := new(bytes.Buffer)
-	cmd := exec.Command(c.Args[0], c.Args[1:]...)
-	cmd.Dir = c.Dir
-	cmd.Env = c.Env
-	cmd.Stdout = out
-	cmd.Stderr = out
-
-	// remember to release the process
-	defer func() {
-		if cmd != nil {
-			if err := cmd.Process.Release(); err != nil {
-				//panic(err)
-				//WriteInfof("Error while waiting releasing the process %s to finish\n",cmd.Args[0])
-			}
-		}
-	}()
-
-	if c.Stdout != "" {
-		f, err := os.Create(c.Stdout)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		cmd.Stdout = f
-	}
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command %q: %v\n%v", c, err, out)
-	}
-
-	return nil
-}
-*/

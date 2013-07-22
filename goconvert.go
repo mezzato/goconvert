@@ -3,6 +3,7 @@ package main
 import (
 	ftp4go "code.google.com/p/ftp4go"
 	"code.google.com/p/goconvert/imageconvert"
+	"code.google.com/p/goconvert/logger"
 	"code.google.com/p/goconvert/settings"
 	webgui "code.google.com/p/goconvert/webgui"
 	"errors"
@@ -17,40 +18,41 @@ import (
 	"time"
 )
 
+var lg logger.SemanticLogger
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hi there!")
 }
 
-func ParseCommandLine() (usewebgui bool, sourcefolder string, collectionname string) {
+func ParseCommandLine() (usewebgui bool, sourcefolder string, collectionname string, logLevel logger.LogLevel) {
 
 	debug := flag.Bool("d", false, "debug mode")
 	webgui := flag.Bool("w", false, "whether to use a web browser instead of the command line")
 	srcfolder := flag.String("f", ".", "the image folder")
 	collname := flag.String("c", "collectionnamewithoutspaces", "the collection name")
-	LogLevelForRunFlag := flag.Int("l", int(imageconvert.Info), "The log level")
+	LogLevelForRunFlag := flag.Int("l", int(logger.INFO), "The log level")
 	flag.Parse()
 
-	imageconvert.LogLevelForRun = imageconvert.LogLevel(*LogLevelForRunFlag)
 	settings.Debug = *debug
 
-	return *webgui, *srcfolder, *collname
+	return *webgui, *srcfolder, *collname, logger.LogLevel(*LogLevelForRunFlag)
 }
 
 func GetSettings(srcfolder, collName string) (s *settings.Settings, err error) {
 
 	if srcfolder == "." {
-		imageconvert.WriteInfo("No source folder specified, using the current: '.'")
+		lg.Info("No source folder specified, using the current: '.'")
 	}
 
 	// check existence
 	if fi, err := os.Stat(srcfolder); err != nil || !fi.IsDir() {
-		//imageconvert.WriteInfo(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))
+		//lg.Info(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))
 		return nil, errors.New(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))
 		//os.Exit(1)
 	}
 
 	if collName == "collectionnamewithoutspaces" {
-		imageconvert.WriteInfo("No collection name was specified, this is required to store your images\n")
+		lg.Info("No collection name was specified, this is required to store your images\n")
 		flag.Usage()
 		return nil, errors.New("No collection name was specified, this is required to store your images\n")
 		//os.Exit(1)
@@ -68,17 +70,17 @@ func GetSettings(srcfolder, collName string) (s *settings.Settings, err error) {
 		return fmt.Sprintf("%-"+padString+"s", s) + ": %s\n"
 	}
 
-	imageconvert.WriteInfof(strings.Repeat("-", pad*2) + "\n")
-	imageconvert.WriteInfof("%"+padString+"s\n", "Settings")
-	imageconvert.WriteInfof(padS("Image folder"), s.SourceDir)
-	imageconvert.WriteInfof(padS("Collection name"), s.CollName)
-	imageconvert.WriteInfof(padS("Home folder"), s.HomeDir)
-	imageconvert.WriteInfof(padS("Publish folder"), s.PublishDir)
-	imageconvert.WriteInfof(padS("Piwigo gallery"), s.PiwigoGalleryDir)
-	imageconvert.WriteInfof(padS("Number of resize processes"), strconv.Itoa(s.ConversionSettings.NoSimultaneousResize))
-	imageconvert.WriteInfof(padS("ftp server"), s.FtpSettings.Address)
-	imageconvert.WriteInfof(padS("ftp user"), s.FtpSettings.Username)
-	imageconvert.WriteInfof(strings.Repeat("-", pad*2) + "\n")
+	lg.Info(fmt.Sprintf(strings.Repeat("-", pad*2) + "\n"))
+	lg.Info(fmt.Sprintf("%"+padString+"s\n", "Settings"))
+	lg.Info(fmt.Sprintf(padS("Image folder"), s.SourceDir))
+	lg.Info(fmt.Sprintf(padS("Collection name"), s.CollName))
+	lg.Info(fmt.Sprintf(padS("Home folder"), s.HomeDir))
+	lg.Info(fmt.Sprintf(padS("Publish folder"), s.PublishDir))
+	lg.Info(fmt.Sprintf(padS("Piwigo gallery"), s.PiwigoGalleryDir))
+	lg.Info(fmt.Sprintf(padS("Number of resize processes"), strconv.Itoa(s.ConversionSettings.NoSimultaneousResize)))
+	lg.Info(fmt.Sprintf(padS("ftp server"), s.FtpSettings.Address))
+	lg.Info(fmt.Sprintf(padS("ftp user"), s.FtpSettings.Username))
+	lg.Info(fmt.Sprintf(strings.Repeat("-", pad*2) + "\n"))
 
 	return s, nil
 
@@ -86,7 +88,7 @@ func GetSettings(srcfolder, collName string) (s *settings.Settings, err error) {
 
 func main() {
 
-	imageconvert.WriteInfo(`
+	fmt.Print(`
 goconvert is a command line tool to convert, archive and upload images to an ftp server.
 
 Type -help for help with the command line arguments.
@@ -97,25 +99,26 @@ windows -> goconvert.exe -f "c:\myfolder with space\myimages" -c mycollectionnam
 
 Have fun!
 
-	`)
+`)
 
-	usewebgui, srcfolder, collectionname := ParseCommandLine()
+	usewebgui, srcfolder, collectionname, logLevel := ParseCommandLine()
 
 	// remove this once tested
 	// usewebgui = true
 	settings.Debug = true
+	lg = logger.NewConsoleSemanticLogger("goconvert", os.Stdout, logLevel)
 
 	if usewebgui {
 		browserCmd, server, err := webgui.StartWebgui()
 		if err != nil {
-			imageconvert.WriteInfo("The local web server could not be started, using the console instead.")
+			fmt.Println("The local web server could not be started, using the console instead.")
 		} else {
 			if browserCmd != nil {
-				imageconvert.WriteInfo("Close the browser to shut down the process when you are finished.")
+				fmt.Println("Close the browser to shut down the process when you are finished.")
 				err = browserCmd.Wait()
 				<-server.Quit
 			} else {
-				imageconvert.WriteInfo("Open a browser manually and go the link specified. Press then Ctrl+C to shut down the process.")
+				fmt.Println("Open a browser manually and go the link specified. Press then Ctrl+C to shut down the process.")
 				<-server.Quit
 			}
 			return
@@ -123,9 +126,10 @@ Have fun!
 	}
 
 	s, err := GetSettings(srcfolder, collectionname)
+	s.Logger = lg
 
 	if err != nil {
-		imageconvert.WriteInfo("Error while collecting the settings:", err)
+		lg.Info(fmt.Sprintf("Error while collecting the settings:", err))
 		//return nil, os.NewError(fmt.Sprintf("The folder '%s' is not a valid directory.", srcfolder))
 		os.Exit(1)
 	}
@@ -141,7 +145,7 @@ Have fun!
 	// password, _ := askParameter(fmt.Sprintf("The password for username %s:", username), "")
 
 	if len(s.FtpSettings.Address) == 0 {
-		imageconvert.WriteInfo("The ftp address was not specified and the upload will be skipped.")
+		lg.Info("The ftp address was not specified and the upload will be skipped.")
 		os.Exit(1)
 	}
 
@@ -154,11 +158,11 @@ Have fun!
 		)
 	*/
 
-	imageconvert.WriteInfo("Connecting to host", s.FtpSettings.Address)
+	lg.Info(fmt.Sprintf("Connecting to host", s.FtpSettings.Address))
 	// connect
 	_, err = ftpClient.Connect(s.FtpSettings.Address, ftp4go.DefaultFtpPort)
 	if err != nil {
-		imageconvert.WriteInfo("The FTP connection could not be established, error: ", err.Error())
+		lg.Info(fmt.Sprintf("The FTP connection could not be established, error: %v", err))
 		os.Exit(1)
 	}
 
@@ -166,7 +170,7 @@ Have fun!
 
 	_, err = ftpClient.Login(s.FtpSettings.Username, s.FtpSettings.Password, "")
 	if err != nil {
-		imageconvert.WriteInfo("The FTP login was invalid, error: ", err.Error())
+		lg.Info(fmt.Sprintf("The FTP login was invalid, error: %v", err))
 		os.Exit(1)
 	}
 
@@ -177,10 +181,10 @@ Have fun!
 		EXCLUDED_DIRS)
 
 	if err != nil {
-		imageconvert.WriteInfo("Error upload to FTP, error: ", err)
+		lg.Info(fmt.Sprintf("Error upload to FTP, error: %v", err))
 		return
 	} else {
-		imageconvert.WriteInfo("Files successfully uploaded")
+		lg.Info("Files successfully uploaded")
 	}
 
 }
@@ -201,42 +205,42 @@ func LaunchConversion(s *settings.Settings) (collPublishFolder string) {
 	}
 
 	// collect responses
-	imageconvert.WriteInfo(fmt.Sprintf("Collecting results"))
+	lg.Info(fmt.Sprintf("Collecting results"))
 
 	for i := 0; i < fileno; i++ {
 
 		r := <-responseChannel
 		fname := filepath.Base(r.ImgF.Path)
 		if r.Error == nil {
-			imageconvert.WriteInfof("Success, file %s resized and archived\n", fname)
+			lg.Info(fmt.Sprintf("Success, file %s resized and archived\n", fname))
 		} else {
-			imageconvert.WriteInfo(fmt.Sprintf("Error, file %s, the error was %s", fname, r.Error))
+			lg.Info(fmt.Sprintf("Error, file %s, the error was %s", fname, r.Error))
 		}
 	}
 
 	quitChannel <- true // stopping the server
-	imageconvert.WriteInfo(fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
-	imageconvert.WriteInfo("Images successfully resized")
+	lg.Info(fmt.Sprintf("The conversion took %.3f seconds", float32(time.Now().Sub(startNanosecs))/1e9))
+	lg.Info("Images successfully resized")
 
 	return collPublishFolder
 }
 
 func PublishCollToFtp(fc *ftp4go.FTP, localDir string, remoteRoorDir string, excludedDirs []string) (err error) {
-	imageconvert.WriteInfo(fmt.Sprintf("Publishing to FTP root folder: %s, from local directory: %s.\nExcluded folders:%s", remoteRoorDir, localDir, excludedDirs))
+	lg.Info(fmt.Sprintf("Publishing to FTP root folder: %s, from local directory: %s.\nExcluded folders:%s", remoteRoorDir, localDir, excludedDirs))
 
 	collName := filepath.Base(localDir)
 	// careful!!!
 	if len(collName) > 0 {
 		/*
 			remoteDir := filepath.Join(remoteRoorDir, collName)
-			imageconvert.WriteInfo("Removing old ftp folder tree if present at:", remoteDir)
+			lg.Info("Removing old ftp folder tree if present at:", remoteDir)
 			err = fc.RemoveRemoteDirTree(remoteDir)
 		*/
 	} else {
 		return errors.New("The collection name can not be empty")
 	}
 
-	imageconvert.WriteInfo("Uploading folder tree:", filepath.Base(localDir))
+	lg.Info(fmt.Sprintf("Uploading folder tree: %s", filepath.Base(localDir)))
 	maxSimultaneousConns := 4
 
 	stats, fileUploaded, quit := startStats()
@@ -269,7 +273,7 @@ func startStats() (stats chan *ftp4go.CallbackInfo, fileUploaded chan bool, quit
 				// do not wait here, the buffered request channel is the barrier
 				go func() {
 					if st.Eof {
-						imageconvert.WriteInfof("Successfully uploaded file: %s\n", st.Resourcename)
+						lg.Info(fmt.Sprintf("Successfully uploaded file: %s\n", st.Resourcename))
 						fileUploaded <- true // done here
 					}
 				}()

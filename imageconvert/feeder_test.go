@@ -1,6 +1,7 @@
 package imageconvert
 
 import (
+	"code.google.com/p/goconvert/logger"
 	"code.google.com/p/goconvert/settings"
 	//"fmt"
 	"os"
@@ -51,7 +52,7 @@ func TestEngine(t *testing.T) {
 	}()
 
 	t.Logf("Process starting\n")
-	p = newProcess("test", outCh)
+	p = newProcess("test", outCh, logger.ERROR)
 
 	_, e = p.tryStart("body", settings, createTestExecutors)
 	t.Log("Process started")

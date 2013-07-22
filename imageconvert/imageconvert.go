@@ -2,8 +2,10 @@ package imageconvert
 
 import (
 	exif4go "code.google.com/p/exif4go"
+	"code.google.com/p/goconvert/logger"
 	"code.google.com/p/goconvert/settings"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -64,7 +66,8 @@ func newImgFile(fpath string) (i *imgFile, err error) {
 
 	if err1 != nil {
 		//return
-		WriteInfof("Error getting image EXIF info: %s\n", err1)
+		err = fmt.Errorf("Error getting image EXIF info: %v\n", err1)
+		return
 	}
 
 	err = nil
@@ -79,13 +82,15 @@ type ConversionFileSystem struct {
 	CollectionPublishFolder string
 	CollectionArchiveFolder string
 	timeoutMsec             int
+	Logger                  logger.SemanticLogger
 	conversionSettings      *settings.ConversionSettings
 }
 
-func extractConversionFileSystem(sets *settings.Settings) (f *ConversionFileSystem, err error) {
+func extractConversionFileSystem(sets *settings.Settings, logger logger.SemanticLogger) (f *ConversionFileSystem, err error) {
 	f = new(ConversionFileSystem)
 
 	f.conversionSettings = sets.ConversionSettings
+	f.Logger = logger
 
 	f.timeoutMsec = sets.TimeoutMsec
 	f.collName = sets.CollName
@@ -123,7 +128,7 @@ func (f *ConversionFileSystem) getImgFiles() (imgFiles []*imgFile, err error) {
 	imgFiles = make([]*imgFile, 0, 50)
 	var files []string
 	if fi.IsDir() {
-		WriteInfo("Gettings image files in folder", f.sourceDir)
+		f.Logger.Info(fmt.Sprintf("Gettings image files in folder %s", f.sourceDir))
 		gs := filepath.Join(f.sourceDir, "*")
 		files, _ = filepath.Glob(gs) // find all files in folder
 		//WriteVerbose(fmt.Sprintf("Number of files via glob search %s found in folder: %d", gs,len(files)))
@@ -139,7 +144,7 @@ func (f *ConversionFileSystem) getImgFiles() (imgFiles []*imgFile, err error) {
 		ext := strings.ToLower(filepath.Ext(fp))
 		//WriteVerbose(fmt.Sprintf("Number of extensions = %d",len(f.extensions)))
 		idx := sort.SearchStrings(f.extensions, ext)
-		WriteVerbose("The value of idx in the extension slice is:", idx)
+		//f.Logger.Info(fmt.Sprintf("The value of idx in the extension slice is:%d", idx))
 		if idx < len(f.extensions) && f.extensions[idx] == ext {
 			var ifile *imgFile
 			ifile, err = newImgFile(fp)
@@ -170,7 +175,7 @@ func Convert(collname string,
 	publishfolder string,
 	archivesubfoldername string,
 	convSettings *settings.ConversionSettings) (responseChannel chan *ConvertResponse, quitChannel chan bool, fileno int, collPublishFolder string, err error) {
-	WriteInfo("Starting the image conversion")
+	//WriteInfo("Starting the image conversion")
 
 	//var imgFolder *imgFolder
 

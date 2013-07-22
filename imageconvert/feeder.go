@@ -15,6 +15,7 @@ package imageconvert
 
 import (
 	"bytes"
+	"code.google.com/p/goconvert/logger"
 	"code.google.com/p/goconvert/settings"
 	"errors"
 	"fmt"
@@ -52,24 +53,26 @@ type Process struct {
 	run    *exec.Cmd
 	killCh chan struct{}
 	waitCh chan error
+	Logger logger.SemanticLogger
 }
 
 // startProcess builds and runs the given program, sending its output
 // and end event as Messages on the provided channel.
-func newProcess(id string, out chan<- *Message) *Process {
+func newProcess(id string, out chan<- *Message, logLevel logger.LogLevel) *Process {
 	p := &Process{
 		id:     id,
 		out:    out,
 		done:   make(chan struct{}),
 		killCh: make(chan struct{}),
 		waitCh: make(chan error),
+		Logger: logger.NewConsoleSemanticLogger("goconvert", os.Stdout, logLevel),
 	}
 
 	return p
 }
 
 func CreateAndStartProcess(id, body string, out chan<- *Message, opt *Options) (p *Process, cfs *ConversionFileSystem, err error) {
-	p = newProcess(id, out)
+	p = newProcess(id, out, logger.ERROR)
 
 	if cfs, err = p.tryStart(body, opt.Settings, p.createExecutors); err != nil {
 		p.end(err)
@@ -86,7 +89,7 @@ func (p *Process) tryStart(body string, settings *settings.Settings, executorCre
 	// (rather than the go tool process).
 	// This makes Kill work.
 
-	cfs, err = extractConversionFileSystem(settings)
+	cfs, err = extractConversionFileSystem(settings, p.Logger)
 	if err != nil {
 		return
 	}
@@ -101,7 +104,7 @@ func (p *Process) tryStart(body string, settings *settings.Settings, executorCre
 	// check imgmagick
 	args := []string{"convert", "-version"}
 	c := exec.Command(args[0], args[1:]...)
-	WriteVerbose("Testing ImageMagick installation")
+	p.Logger.Info("Testing ImageMagick installation")
 	err = c.Run()
 	if err != nil {
 		err = fmt.Errorf("Error running ImageMagick, check that it is correctly installed. Error: %s", err.Error())
