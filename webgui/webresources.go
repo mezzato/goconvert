@@ -24,12 +24,6 @@ func setVariables() {webresources["index.html"] = `
 	<section id="collectionname">
 		<label for="collection">Collection name</label> <input id="collection"
 			name="collection" type="text" value="" />
-		<p>
-			<input type="button" id="compress" value="compress images" />
-		</p>
-		<p>
-			<input type="button" id="cancel" value="cancel" />
-		</p>
 	</section>
 	<section id="logsection">
 		<span>Output log</span>

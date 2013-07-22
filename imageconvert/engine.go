@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -61,8 +62,10 @@ func createWorker(timeoutMsec int, cmd *Executor, id string, outCh chan<- (*Mess
 				//wp.activeRequests.Add(1)
 				err := executeWithTimeout(cmd, timeoutMsec, tr)
 
+				_, fname := path.Split(tr.Path)
+
 				if err != nil {
-					msg := fmt.Sprintf("%s for image %s failed to process due to error %v\n", cmd.StepName, tr.Path, err)
+					msg := fmt.Sprintf("%s for image %s failed to process due to error %v\n", cmd.StepName, fname, err)
 					outCh <- &Message{
 						Id: id, Kind: "stderr",
 						Body: msg,
@@ -73,7 +76,7 @@ func createWorker(timeoutMsec int, cmd *Executor, id string, outCh chan<- (*Mess
 
 				outCh <- &Message{
 					Id: id, Kind: "stdout",
-					Body: fmt.Sprintf("%s for image %s correctly executed\n", cmd.StepName, tr.Path),
+					Body: fmt.Sprintf("%s for image %s correctly executed\n", cmd.StepName, fname),
 				}
 
 				//fmt.Printf("worker %s processed without errors\n", cmd.Step)
