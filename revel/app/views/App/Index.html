@@ -1,0 +1,52 @@
+{{set . "title" "Home"}}
+{{template "header.html" .}}
+
+	<h1>Viewing index</h1>
+
+	<div>Testing page, port {{.p.WebPort |html}}</div>
+
+	<h1>Image conversion and upload tool</h1>
+	<section id="imagefolder">
+		<label for="folder">Image folder</label> <input id="folder"
+			name="folder" type="text" value="" />
+	</section>
+	<section id="collectionname">
+		<label for="collection">Collection name</label> <input id="collection"
+			name="collection" type="text" value="" />
+	</section>
+	<section id="logsection">
+		<span>Output log</span>
+		<div id="outputlog"></div>
+	</section>
+	<section id="errorsection">
+		<span>Error log</span>
+		<div id="errors" style="color:maroon;font-weight: bold;">
+		
+		</div>
+	</section>
+	
+	<div class="container">
+	  <div class="row">
+	    <div class="span6">
+	      {{template "flash.html" .}}
+	    </div>
+	  </div>
+	</div>
+	
+	<script src="/public/js/jquery-2.0.3.js" type="text/javascript" charset="utf-8"></script>
+	<script>
+		var convertModule = (function(mod) {
+			mod.settings =  JSON.parse('{{.p.SettingsAsJson}}');
+			return mod
+		})(convertModule || {});
+	
+		$(function(){
+			$('#folder').val(convertModule.settings && convertModule.settings.homeDir);
+		});
+	</script>
+	
+	<script src="/public/js/socket.js" type="text/javascript" charset="utf-8"></script>
+	<script src="/public/js/play.js" type="text/javascript" charset="utf-8"></script>
+
+
+{{template "footer.html" .}}
