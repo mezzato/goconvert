@@ -160,7 +160,7 @@ Have fun!
 
 	lg.Info(fmt.Sprintf("Connecting to host", s.FtpSettings.Address))
 	// connect
-	_, err = ftpClient.Connect(s.FtpSettings.Address, ftp4go.DefaultFtpPort)
+	_, err = ftpClient.Connect(s.FtpSettings.Address, ftp4go.DefaultFtpPort, "")
 	if err != nil {
 		lg.Info(fmt.Sprintf("The FTP connection could not be established, error: %v", err))
 		os.Exit(1)
