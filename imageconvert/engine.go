@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"time"
 )
@@ -86,7 +87,8 @@ func createWorker(timeoutMsec int, cmd *Executor, id string, outCh chan<- (*Mess
 			case <-quit: // via broadcast
 				//fmt.Printf("worker %s quitting\n", cmd.Step)
 				quit = nil // HL
-				close(out) // stop sending and close the channel to make any range loop exit
+				// !DO NOT DO THIS: it is dangerous, gives runtime errors
+				//close(out) // stop sending and close the channel to make any range loop exit
 				return
 			}
 		}
@@ -105,11 +107,13 @@ func executeWithTimeout(cmd *Executor, timeoutMsec int, tr *imgFile) (err error)
 			if e != nil {
 				switch e.(type) {
 				case runtime.Error:
-					panic(e)
+					ec <- fmt.Errorf("runtime error: %s", string(debug.Stack()))
+					//panic(e)
 				case error:
 					ec <- e.(error)
 				default:
-					panic(e)
+					ec <- fmt.Errorf("Critical error: %s", string(debug.Stack()))
+					//panic(e)
 				}
 			}
 		}()

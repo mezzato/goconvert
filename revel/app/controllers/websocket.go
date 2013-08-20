@@ -56,6 +56,7 @@ func (ws WebSocket) ConvertSocket(c *websocket.Conn) revel.Result {
 			case "run":
 				log.Println("try to kill process with id: " + m.Id)
 				proc[m.Id].Kill()
+				log.Println("killed process with id: " + m.Id)
 				lOut := limiter(in, out)
 				p, _, e := imageconvert.CreateAndStartProcess(m.Id, m.Body, lOut, m.Options)
 				if e != nil {
@@ -78,7 +79,8 @@ func (ws WebSocket) ConvertSocket(c *websocket.Conn) revel.Result {
 			for _, p := range proc {
 				p.Kill()
 			}
-			return nil
+			// ! do not return
+			break
 		}
 	}
 }

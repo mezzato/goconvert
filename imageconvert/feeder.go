@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"unicode/utf8"
 )
 
@@ -54,6 +55,7 @@ type Process struct {
 	killCh chan struct{}
 	waitCh chan error
 	Logger logger.SemanticLogger
+	once   sync.Once
 }
 
 // startProcess builds and runs the given program, sending its output
@@ -159,7 +161,11 @@ func (p *Process) tryStart(body string, settings *settings.Settings, executorCre
 	// consume all images
 	go func() {
 		for j := 0; j < len(cfs.imgFiles); j++ {
-			<-outChan
+			select {
+			case <-outChan:
+			case <-p.killCh:
+				break
+			}
 		}
 		p.waitCh <- nil
 	}()
@@ -188,15 +194,18 @@ func (p *Process) end(err error) {
 
 // Kill stops the process if it is running and waits for it to exit.
 func (p *Process) Kill() {
-	if p == nil || p.killCh == nil {
+	if p == nil {
 		return
 	}
 	//p.run.Process.Kill()
 	//p.killCh <- struct{}{}
 	// send a broadcast message
-	close(p.killCh)
-	p.killCh = nil
-	<-p.done // block until process exits
+	p.once.Do(
+		func() {
+			close(p.killCh)
+			<-p.done // block until process exits
+		})
+
 }
 
 // cmd builds an *exec.Cmd that writes its standard output and error to the
