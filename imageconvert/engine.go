@@ -86,6 +86,8 @@ func createWorker(timeoutMsec int, cmd *Executor, id string, outCh chan<- (*Mess
 			case <-quit: // via broadcast
 				//fmt.Printf("worker %s quitting\n", cmd.Step)
 				quit = nil // HL
+				close(out) // stop sending and close the channel to make any range loop exit
+				return
 			}
 		}
 	}

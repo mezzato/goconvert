@@ -78,6 +78,7 @@ func CreateAndStartProcess(id, body string, out chan<- *Message, opt *Options) (
 		p.end(err)
 		return
 	}
+	go p.Wait()
 	return
 }
 
@@ -187,13 +188,14 @@ func (p *Process) end(err error) {
 
 // Kill stops the process if it is running and waits for it to exit.
 func (p *Process) Kill() {
-	if p == nil {
+	if p == nil || p.killCh == nil {
 		return
 	}
 	//p.run.Process.Kill()
 	//p.killCh <- struct{}{}
 	// send a broadcast message
 	close(p.killCh)
+	p.killCh = nil
 	<-p.done // block until process exits
 }
 

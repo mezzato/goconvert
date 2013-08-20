@@ -35,10 +35,10 @@
   }
 
   function init(code, folderNode, collectionNode) {
-    var id = getId();
 
     var output = document.createElement('div');
     var outpre = document.createElement('pre');
+    outpre.id = getId();
     var stopFunc;
 
     /*

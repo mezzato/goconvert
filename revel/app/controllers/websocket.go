@@ -28,6 +28,7 @@ func (ws WebSocket) ConvertSocket(c *websocket.Conn) revel.Result {
 				errc <- err
 				return
 			}
+			log.Println("Feeding in message with id: " + m.Id)
 			in <- &m
 		}
 	}()
@@ -53,24 +54,26 @@ func (ws WebSocket) ConvertSocket(c *websocket.Conn) revel.Result {
 		case m := <-in:
 			switch m.Kind {
 			case "run":
+				log.Println("try to kill process with id: " + m.Id)
 				proc[m.Id].Kill()
 				lOut := limiter(in, out)
 				p, _, e := imageconvert.CreateAndStartProcess(m.Id, m.Body, lOut, m.Options)
 				if e != nil {
+					log.Println(e)
 					break
 				}
+				log.Println("running process with id: " + m.Id)
 				proc[m.Id] = p
-
-				go p.Wait()
-
 			case "kill":
 				proc[m.Id].Kill()
+				log.Println("killed process with id: " + m.Id)
 			}
 		case err := <-errc:
 			if err != io.EOF {
 				// A encode or decode has failed; bail.
 				log.Println(err)
 			}
+			log.Println("shutting down")
 			// Shut down any running processes.
 			for _, p := range proc {
 				p.Kill()
