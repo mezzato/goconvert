@@ -6,6 +6,8 @@ import (
 	//"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	//"strings"
 	"testing"
 )
 
@@ -33,18 +35,21 @@ func TestEngine(t *testing.T) {
 	opt := new(Options)
 
 	homeImgDir := "../test"
+
 	settings := settings.NewDefaultSettings("testcollection", homeImgDir)
 	opt.Settings = settings
 	outCh := make(chan *Message)
 	var p *Process
 	var e error
+	m, e := filepath.Glob(homeImgDir + "/*.jpg")
+
 	t.Log("test starting")
 	count := 0
 
 	go func() {
-		for m := range outCh {
-			t.Logf("messsage: kind %s, id: %s, message: %s", m.Kind, m.Id, m.Body)
-			if m.Kind != "end" {
+		for msg := range outCh {
+			t.Logf("messsage: kind %s, id: %s, message: %s", msg.Kind, msg.Id, msg.Body)
+			if msg.Kind != "end" {
 				count++
 			}
 
@@ -64,7 +69,7 @@ func TestEngine(t *testing.T) {
 	if e != nil {
 		t.Fatalf("error %q", e)
 	}
-	expectedCount := 2 * 15
+	expectedCount := 2 * len(m)
 	if count != expectedCount {
 		t.Fatalf("The number of messages is %d, expected %d", count, expectedCount)
 	}
@@ -80,6 +85,7 @@ func TestConversion(t *testing.T) {
 	srcdir := "../test"
 
 	m, e := filepath.Glob(srcdir + "/*.jpg")
+	//sort.Strings(m)
 	srccount := len(m)
 
 	sets := settings.NewDefaultSettings("testcollection", srcdir)
@@ -118,12 +124,23 @@ func TestConversion(t *testing.T) {
 		t.Fatalf("error %q", e)
 	}
 
-	m, e = filepath.Glob(cfs.CollectionPublishFolder + "/*.jpg")
+	// check that the _ is always present
+	m1, e := filepath.Glob(cfs.CollectionPublishFolder + "/*.jpg")
+	//sort.Strings(m1)
 	destcount := len(m)
 
 	if srccount != destcount {
 		t.Fatalf("The number of messages is %d, expected %d", destcount, srccount)
 	}
+
+	for _, n := range m {
+		cn := regexNormalize.ReplaceAllString(n, "_")
+
+		if sort.SearchStrings(m1, cn) < 0 {
+			t.Fatalf("The output file name %s differs from the expected cleaned file name %s", n, cn)
+		}
+	}
+
 	//c.Wait()
 
 }

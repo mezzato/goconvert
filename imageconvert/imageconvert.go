@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -24,6 +25,22 @@ type imgFile struct {
 	timestamp string
 	sortkey   string
 	Path      string
+}
+
+var regexNormalize = regexp.MustCompile(fmt.Sprintf("(?i)%s", `\s`))
+
+//includeFileRegexp.MatchString(info.Name())
+
+func (img *imgFile) normalizeName() string {
+	if img == nil {
+		return ""
+	}
+	bfn := filepath.Base(img.Path)
+	if len(bfn) == 0 {
+		return ""
+	}
+	return regexNormalize.ReplaceAllString(bfn, "_")
+	//return strings.Join(strings.Fields(bfn), "_")
 }
 
 func getFileExifInfo(fp string) (timestamp string, sortkey string, err error) {

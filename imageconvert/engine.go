@@ -158,7 +158,7 @@ func (p *Process) createResizeExecutor(collPublishFolder string, convSets []*img
 				return errors.New("Command arguments must be specified")
 			}
 
-			newImgName := set.prefix + filepath.Base(img.Path)
+			newImgName := set.prefix + img.normalizeName()
 			subFolderPath := filepath.Join(collPublishFolder, set.subFolderRelPath)
 			var fi os.FileInfo
 			if fi, err = os.Stat(subFolderPath); err != nil || !fi.IsDir() {
@@ -199,7 +199,7 @@ func (p *Process) createArchiveExecutor(collArchiveFolder string, moveOriginal b
 				return err
 			}
 		}
-		movePath := filepath.Join(collArchiveFolder, filepath.Base(img.Path))
+		movePath := filepath.Join(collArchiveFolder, img.normalizeName())
 
 		if moveOriginal {
 			p.Logger.Debug(fmt.Sprintf("Archiving original file to:%s", movePath))
