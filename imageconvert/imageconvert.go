@@ -22,16 +22,17 @@ type imgParams struct {
 }
 
 type imgFile struct {
-	timestamp string
-	sortkey   string
-	Path      string
+	timestamp       string
+	sortkey         string
+	Path            string
+	targetExtension string
 }
 
 var regexNormalize = regexp.MustCompile(fmt.Sprintf("(?i)%s", `\s`))
 
 //includeFileRegexp.MatchString(info.Name())
 
-func (img *imgFile) normalizeName() string {
+func (img *imgFile) getNormalizedName(useMappedExt bool) string {
 	if img == nil {
 		return ""
 	}
@@ -39,7 +40,11 @@ func (img *imgFile) normalizeName() string {
 	if len(bfn) == 0 {
 		return ""
 	}
-	return regexNormalize.ReplaceAllString(bfn, "_")
+	n := regexNormalize.ReplaceAllString(bfn, "_")
+	if useMappedExt {
+		n = strings.TrimRight(n, filepath.Ext(n)) + img.targetExtension
+	}
+	return n
 	//return strings.Join(strings.Fields(bfn), "_")
 }
 
@@ -78,7 +83,7 @@ func getFileExifInfo(fp string) (timestamp string, sortkey string, err error) {
 	return
 }
 
-func newImgFile(fpath string) (i *imgFile, err error) {
+func newImgFile(fpath string, targetExtension string) (i *imgFile, err error) {
 	ts, sk, err1 := getFileExifInfo(fpath)
 
 	if err1 != nil {
@@ -88,13 +93,14 @@ func newImgFile(fpath string) (i *imgFile, err error) {
 	}
 
 	err = nil
-	return &imgFile{ts, sk, fpath}, err
+	return &imgFile{ts, sk, fpath, targetExtension}, err
 }
 
 type ConversionFileSystem struct {
 	collName                string
 	sourceDir               string
 	extensions              []string
+	remapping               map[string]string
 	imgFiles                []*imgFile
 	CollectionPublishFolder string
 	CollectionArchiveFolder string
@@ -112,7 +118,10 @@ func extractConversionFileSystem(sets *settings.Settings, logger logger.Semantic
 	f.timeoutMsec = sets.TimeoutMsec
 	f.collName = sets.CollName
 	f.sourceDir = sets.SourceDir
-	f.extensions = []string{".bmp", ".jpeg", ".jpg", ".gif", ".png"}
+	f.extensions = []string{".bmp", ".jpeg", ".jpg", ".gif", ".png", ".nef"}
+	f.remapping = map[string]string{
+		".nef": ".jpg",
+	}
 	// NOTE: sort extensions to look through them
 	sort.Strings(f.extensions)
 
@@ -164,7 +173,11 @@ func (f *ConversionFileSystem) getImgFiles() (imgFiles []*imgFile, err error) {
 		//f.Logger.Info(fmt.Sprintf("The value of idx in the extension slice is:%d", idx))
 		if idx < len(f.extensions) && f.extensions[idx] == ext {
 			var ifile *imgFile
-			ifile, err = newImgFile(fp)
+			newExt := ext
+			if e, ok := f.remapping[ext]; ok {
+				newExt = e
+			}
+			ifile, err = newImgFile(fp, newExt)
 			if err != nil {
 				return
 			}
