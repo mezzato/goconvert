@@ -1,9 +1,9 @@
 package imageconvert
 
 import (
-	exif4go "code.google.com/p/exif4go"
-	"code.google.com/p/goconvert/logger"
-	"code.google.com/p/goconvert/settings"
+	exif4go "github.com/mezzato/exif4go"
+	"github.com/mezzato/goconvert/logger"
+	"github.com/mezzato/goconvert/settings"
 	"errors"
 	"fmt"
 	"os"

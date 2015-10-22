@@ -1,7 +1,7 @@
 package webgui
 
 import (
-	settings "code.google.com/p/goconvert/settings"
+	settings "github.com/mezzato/goconvert/settings"
 	"encoding/json"
 	"errors"
 	"fmt"

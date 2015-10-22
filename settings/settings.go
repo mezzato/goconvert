@@ -1,8 +1,8 @@
 package settings
 
 import (
-	conf "code.google.com/p/goconf/conf"
-	logger "code.google.com/p/goconvert/logger"
+	conf "github.com/dlintw/goconf/conf"
+	logger "github.com/mezzato/goconvert/logger"
 	"errors"
 	"fmt"
 	"log"

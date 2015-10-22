@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"code.google.com/p/go.net/websocket"
-	"code.google.com/p/goconvert/imageconvert"
+	"golang.org/x/net/websocket"
+	"github.com/mezzato/goconvert/imageconvert"
 	"encoding/json"
 	"github.com/robfig/revel"
 	"io"

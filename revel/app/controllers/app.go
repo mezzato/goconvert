@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"code.google.com/p/goconvert/settings"
+	"github.com/mezzato/goconvert/settings"
 	"encoding/json"
 	"github.com/robfig/revel"
 	"path/filepath"

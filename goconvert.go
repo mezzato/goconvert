@@ -1,11 +1,11 @@
 package main
 
 import (
-	ftp4go "code.google.com/p/ftp4go"
-	"code.google.com/p/goconvert/imageconvert"
-	"code.google.com/p/goconvert/logger"
-	"code.google.com/p/goconvert/settings"
-	webgui "code.google.com/p/goconvert/webgui"
+	ftp4go "github.com/mezzato/ftp4go"
+	"github.com/mezzato/goconvert/imageconvert"
+	"github.com/mezzato/goconvert/logger"
+	"github.com/mezzato/goconvert/settings"
+	webgui "github.com/mezzato/goconvert/webgui"
 	"errors"
 	"flag"
 	"fmt"

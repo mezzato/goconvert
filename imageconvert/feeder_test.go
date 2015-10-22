@@ -1,8 +1,8 @@
 package imageconvert
 
 import (
-	"code.google.com/p/goconvert/logger"
-	"code.google.com/p/goconvert/settings"
+	"github.com/mezzato/goconvert/logger"
+	"github.com/mezzato/goconvert/settings"
 	//"fmt"
 	"os"
 	"path/filepath"
