@@ -4,13 +4,14 @@ import (
 	"errors"
 	"os"
 	//"go/build"
-	"github.com/mezzato/goconvert/imageconvert"
-	lg "github.com/mezzato/goconvert/logger"
-	settings "github.com/mezzato/goconvert/settings"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
+
+	"github.com/mezzato/goconvert/imageconvert"
+	lg "github.com/mezzato/goconvert/logger"
+	settings "github.com/mezzato/goconvert/settings"
 	//"io/ioutil"
 	//"log"
 	"net/http"
@@ -71,7 +72,7 @@ type requestProcessor func(r *http.Request) (msgs []string, err error, eof bool)
 var (
 	templates       = make(map[string]*template.Template)
 	logger          *appendSliceWriter
-	slogger         lg.SemanticLogger  = lg.NewConsoleSemanticLogger("goconvert", os.Stdout, lg.INFO)
+	slogger         lg.SemanticLogger  = lg.NewConsoleSemanticLogger("goconvert", os.Stdout, lg.DEBUG)
 	homeImgDir                         = filepath.Join(settings.GetHomeDir(), "Pictures", "ToResize")
 	defaultSettings *settings.Settings = settings.NewDefaultSettings("", homeImgDir)
 	compressing     bool

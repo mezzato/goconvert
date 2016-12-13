@@ -15,8 +15,6 @@ package imageconvert
 
 import (
 	"bytes"
-	"github.com/mezzato/goconvert/logger"
-	"github.com/mezzato/goconvert/settings"
 	"errors"
 	"fmt"
 	"log"
@@ -25,6 +23,9 @@ import (
 	"path/filepath"
 	"sync"
 	"unicode/utf8"
+
+	"github.com/mezzato/goconvert/logger"
+	"github.com/mezzato/goconvert/settings"
 )
 
 // Environ provides an environment when a binary, such as the go tool, is
@@ -74,7 +75,7 @@ func newProcess(id string, out chan<- *Message, logLevel logger.LogLevel) *Proce
 }
 
 func CreateAndStartProcess(id, body string, out chan<- *Message, opt *Options) (p *Process, cfs *ConversionFileSystem, err error) {
-	p = newProcess(id, out, logger.ERROR)
+	p = newProcess(id, out, logger.DEBUG)
 
 	if cfs, err = p.tryStart(body, opt.Settings, p.createExecutors); err != nil {
 		p.end(err)
@@ -105,7 +106,7 @@ func (p *Process) tryStart(body string, settings *settings.Settings, executorCre
 	}
 
 	// check imgmagick
-	args := []string{"convert", "-version"}
+	args := []string{"magick", "-version"}
 	c := exec.Command(args[0], args[1:]...)
 	p.Logger.Info("Testing ImageMagick installation")
 	err = c.Run()

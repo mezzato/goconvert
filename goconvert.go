@@ -1,11 +1,6 @@
 package main
 
 import (
-	ftp4go "github.com/mezzato/ftp4go"
-	"github.com/mezzato/goconvert/imageconvert"
-	"github.com/mezzato/goconvert/logger"
-	"github.com/mezzato/goconvert/settings"
-	webgui "github.com/mezzato/goconvert/webgui"
 	"errors"
 	"flag"
 	"fmt"
@@ -16,6 +11,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	ftp4go "github.com/mezzato/ftp4go"
+	"github.com/mezzato/goconvert/imageconvert"
+	"github.com/mezzato/goconvert/logger"
+	"github.com/mezzato/goconvert/settings"
+	webgui "github.com/mezzato/goconvert/webgui"
 )
 
 var lg logger.SemanticLogger
@@ -26,11 +27,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func ParseCommandLine() (usewebgui bool, sourcefolder string, collectionname string, logLevel logger.LogLevel) {
 
-	debug := flag.Bool("d", false, "debug mode")
+	debug := flag.Bool("d", true, "debug mode")
 	webgui := flag.Bool("w", false, "whether to use a web browser instead of the command line")
 	srcfolder := flag.String("f", ".", "the image folder")
 	collname := flag.String("c", "collectionnamewithoutspaces", "the collection name")
-	LogLevelForRunFlag := flag.Int("l", int(logger.INFO), "The log level")
+	LogLevelForRunFlag := flag.Int("l", int(logger.DEBUG), "The log level")
 	flag.Parse()
 
 	settings.Debug = *debug
@@ -107,6 +108,8 @@ Have fun!
 	// usewebgui = true
 	settings.Debug = true
 	lg = logger.NewConsoleSemanticLogger("goconvert", os.Stdout, logLevel)
+
+	fmt.Println("Log level is:", logLevel)
 
 	if usewebgui {
 		browserCmd, server, err := webgui.StartWebgui()

@@ -25,13 +25,13 @@ func (p *Process) createExecutors(c *ConversionFileSystem) (pipe []*Executor) {
 	convSettings := c.conversionSettings
 
 	smallPars := &imgParams{
-		[]string{"-resize", strconv.Itoa(convSettings.AreaInPixed()) + "@", "-mattecolor", "gray4", "-frame", "4x4+2+2", "-font", "helvetica", "-fill", "black"},
+		[]string{"-resize", strconv.Itoa(convSettings.AreaInPixed()) + "@", "-alpha-color", "gray4", "-frame", "4x4+2+2", "-font", "helvetica", "-fill", "black"},
 		"",
 		"",
 	}
 
 	thumbnailPars := &imgParams{
-		[]string{"-resize", "128x128", "-mattecolor", "gray4", "-font", "helvetica"},
+		[]string{"-resize", "128x128", "-alpha-color", "gray4", "-font", "helvetica"},
 		"thumbnail",
 		"TN-",
 	}
@@ -171,7 +171,7 @@ func (p *Process) createResizeExecutor(collPublishFolder string, convSets []*img
 
 			newImgPath := filepath.Join(subFolderPath, newImgName)
 
-			fullCmd := []string{"convert", img.Path}
+			fullCmd := []string{"magick", img.Path}
 			fullCmd = append(fullCmd, set.cmdArgs...)
 			fullCmd = append(fullCmd, newImgPath)
 
