@@ -25,13 +25,13 @@ func (p *Process) createExecutors(c *ConversionFileSystem) (pipe []*Executor) {
 	convSettings := c.conversionSettings
 
 	smallPars := &imgParams{
-		[]string{"-resize", strconv.Itoa(convSettings.AreaInPixed()) + "@", "-alpha-color", "gray4", "-frame", "4x4+2+2", "-font", "helvetica", "-fill", "black"},
+		[]string{"-resize", strconv.Itoa(convSettings.AreaInPixed()) + "@", "-frame", "4x4+2+2", "-font", "helvetica", "-fill", "black"},
 		"",
 		"",
 	}
 
 	thumbnailPars := &imgParams{
-		[]string{"-resize", "128x128", "-alpha-color", "gray4", "-font", "helvetica"},
+		[]string{"-resize", "128x128", "-font", "helvetica"},
 		"thumbnail",
 		"TN-",
 	}

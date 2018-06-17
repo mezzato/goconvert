@@ -1,9 +1,6 @@
 package imageconvert
 
 import (
-	exif4go "github.com/mezzato/exif4go"
-	"github.com/mezzato/goconvert/logger"
-	"github.com/mezzato/goconvert/settings"
 	"errors"
 	"fmt"
 	"os"
@@ -13,6 +10,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	exif4go "github.com/mezzato/exif4go"
+	"github.com/mezzato/goconvert/logger"
+	"github.com/mezzato/goconvert/settings"
 )
 
 type imgParams struct {
@@ -118,9 +119,10 @@ func extractConversionFileSystem(sets *settings.Settings, logger logger.Semantic
 	f.timeoutMsec = sets.TimeoutMsec
 	f.collName = sets.CollName
 	f.sourceDir = sets.SourceDir
-	f.extensions = []string{".bmp", ".jpeg", ".jpg", ".gif", ".png", ".nef"}
+	f.extensions = []string{".bmp", ".jpeg", ".jpg", ".gif", ".png", ".nef", ".tif"}
 	f.remapping = map[string]string{
 		".nef": ".jpg",
+		".tif": ".jpg",
 	}
 	// NOTE: sort extensions to look through them
 	sort.Strings(f.extensions)
