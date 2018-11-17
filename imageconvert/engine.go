@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -25,7 +26,7 @@ func (p *Process) createExecutors(c *ConversionFileSystem) (pipe []*Executor) {
 	convSettings := c.conversionSettings
 
 	smallPars := &imgParams{
-		[]string{"-resize", strconv.Itoa(convSettings.AreaInPixed()) + "@", "-frame", "4x4+2+2", "-font", "helvetica", "-fill", "black"},
+		[]string{"-resize", strconv.Itoa(convSettings.AreaInPixed()) + "@", "-font", "helvetica", "-fill", "black"},
 		"",
 		"",
 	}
@@ -176,7 +177,7 @@ func (p *Process) createResizeExecutor(collPublishFolder string, convSets []*img
 			fullCmd = append(fullCmd, newImgPath)
 
 			c := p.cmd("", fullCmd...) //&Cmd{Args: fullCmd}
-			p.Logger.Debug(fmt.Sprintf("Running cmd:%s", c))
+			p.Logger.Debug(fmt.Sprintf("Running cmd:%s", strings.Join(fullCmd, " ")))
 			err = c.Run()
 			if err != nil {
 				return
