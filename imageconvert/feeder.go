@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !appengine
 // +build !appengine
 
 // Package socket implements an WebSocket-based playground backend.
@@ -106,7 +107,7 @@ func (p *Process) tryStart(body string, settings *settings.Settings, executorCre
 	}
 
 	// check imgmagick
-	args := []string{"magick", "-version"}
+	args := []string{"convert", "-version"}
 	c := exec.Command(args[0], args[1:]...)
 	p.Logger.Info("Testing ImageMagick installation")
 	err = c.Run()

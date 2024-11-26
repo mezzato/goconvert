@@ -172,7 +172,7 @@ func (p *Process) createResizeExecutor(collPublishFolder string, convSets []*img
 
 			newImgPath := filepath.Join(subFolderPath, newImgName)
 
-			fullCmd := []string{"magick", img.Path}
+			fullCmd := []string{"convert", img.Path}
 			fullCmd = append(fullCmd, set.cmdArgs...)
 			fullCmd = append(fullCmd, newImgPath)
 
