@@ -1,12 +1,13 @@
 package controllers
 
 import (
-	"golang.org/x/net/websocket"
-	"github.com/mezzato/goconvert/imageconvert"
 	"encoding/json"
-	"github.com/robfig/revel"
 	"io"
 	"log"
+
+	"github.com/mezzato/goconvert/imageconvert"
+	"github.com/revel/revel"
+	"golang.org/x/net/websocket"
 )
 
 const msgLimit = 1000 // max number of messages to send per session

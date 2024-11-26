@@ -1,10 +1,11 @@
 package controllers
 
 import (
-	"github.com/mezzato/goconvert/settings"
 	"encoding/json"
-	"github.com/robfig/revel"
 	"path/filepath"
+
+	"github.com/mezzato/goconvert/settings"
+	"github.com/revel/revel"
 )
 
 type Page struct {
@@ -29,7 +30,7 @@ func (c App) Index() revel.Result {
 		return nil
 	}
 
-	p := &Page{WebPort: revel.HttpPort, SettingsAsJson: string(settingsAsJson)}
+	p := &Page{WebPort: revel.HTTPPort, SettingsAsJson: string(settingsAsJson)}
 
 	return c.Render(p)
 }
